@@ -1,19 +1,52 @@
 # Automatyzacja Bitrix-GUS-Firmao (n8n)
 
-## Status: WORKFLOW GOTOWY - wymaga konfiguracji
+## Status: W TRAKCIE TESTOWANIA - problem z GUS API
 
-## Cel
-Workflow n8n: Bitrix webhook → walidacja NIP → GUS SOAP → update Bitrix → upsert Firmao → notyfikacje błędów.
+## Aktualny stan (2026-01-26)
+- Workflow zaimportowany do n8n
+- Webhook działa (testowy: `https://n8n.public.asterisk-dev.pl/webhook-test/bitrix-company-webhook`)
+- Bitrix GET działa
+- Walidacja NIP działa
+- **PROBLEM: GUS Zaloguj zwraca błąd** - do debugowania
+
+### Ostatni błąd GUS
+```
+ActionNotSupported - The message with Action 'http://CIS/BIR/PUBL/2014/07/IUslugaBIRzewnPubl/Zaloguj'
+cannot be processed at the receiver, due to a ContractFilter mismatch
+```
+
+### Możliwe przyczyny do sprawdzenia:
+1. Klucz API GUS może być nieaktywny/wygasły
+2. Format SOAP może wymagać dodatkowych elementów
+3. API GUS może mieć inne wymagania (np. certyfikat, IP whitelist)
 
 ## Pliki
-- `Bitrix_GUS_Firmao.json` - workflow do importu w n8n (20 node'ów)
+- `Bitrix_GUS_Firmao.json` - workflow n8n (20 node'ów)
 - `CLAUDE.md` - ten plik kontekstowy
 
-## Stack
-- **n8n** - workflow (JSON export)
-- **Bitrix24** - CRM, REST webhook
-- **GUS BIR1** - SOAP API (klucz produkcyjny)
-- **Firmao** - REST API (Basic Auth)
+## Skonfigurowane wartości (HARDCODED w workflow)
+
+### Bitrix24
+- **Webhook URL:** `https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/`
+- **Pole NIP:** `UF_CRM_661903D52335E`
+- **Pole Status GUS:** `UF_CRM_1769435766`
+- **Pole Komunikat GUS:** `UF_CRM_1769435867`
+- **Pole REGON:** `UF_CRM_1769435935`
+- **Pole KRS:** `UF_CRM_1769435983`
+
+### GUS BIR API
+- **Klucz API:** `b901f957c1f847c79d06`
+- **Endpoint:** `https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc`
+- **SOAP Action prefix:** `http://CIS/BIR/PUBL/2014/07/IUslugaBIRzewnPubl/`
+
+### Firmao
+- **URL API:** `https://system.firmao.pl/scanlab/api`
+- **Login:** `scanlab.api@firmao.pl`
+- **Haslo:** `d36e725ba59b4a7e`
+- **Credential w n8n:** Header Auth z `Authorization: Basic c2NhbmxhYi5hcGlAZmlybWFvLnBsOmQzNmU3MjViYTU5YjRhN2U=`
+
+## Testowa firma w Bitrix
+- **ID:** 4488
 
 ## Przepływ (20 node'ów)
 ```
@@ -22,53 +55,18 @@ Webhook → BitrixGet → IF(sync?) → WalidujNIP → IF(valid?)
   → BitrixUpdate(OK) → FirmaoSearch → IF(exists?)
     → FirmaoCreate / FirmaoUpdate → END
 
-Błędy: → BitrixUpdate(ERROR) → Notify → END
+Bledy: → BitrixUpdate(ERROR) → Notify → END
 ```
-
-## KONFIGURACJA WYMAGANA
-
-### 1. Sprawdź nazwę pola NIP w Bitrix
-URL: `https://TWOJA_DOMENA.bitrix24.pl/rest/WEBHOOK/crm.company.fields`
-Szukaj pola z "NIP" - zanotuj nazwę techniczną (np. `UF_CRM_1234567890`)
-
-### 2. Utwórz pola w Bitrix (CRM → Ustawienia → Pola → Firma)
-| Pole | Typ | Wartości |
-|------|-----|----------|
-| UF_CRM_GUS_SYNC_STATUS | Lista | PENDING, OK, ERROR |
-| UF_CRM_GUS_SYNC_MESSAGE | Tekst | - |
-| UF_CRM_REGON | Tekst | - |
-| UF_CRM_KRS | Tekst | - |
-
-### 3. Zmienne ENV w n8n (Settings → Environment Variables)
-```
-BITRIX_WEBHOOK_URL=https://xxx.bitrix24.pl/rest/1/xxx/
-GUS_API_KEY=twoj_klucz_produkcyjny
-FIRMAO_API_URL=https://system.firmao.pl/api
-FIRMAO_LOGIN=twoj_login
-FIRMAO_PASSWORD=twoje_haslo
-```
-
-### 4. Credentials w n8n
-Utwórz credential typu "HTTP Basic Auth" o nazwie "Firmao API"
-
-### 5. Po imporcie - dostosuj nazwy pól
-W node "IF: Czy synchronizować?" i "Waliduj NIP" zmień `UF_CRM_NIP` na prawdziwą nazwę pola NIP
-
-### 6. Webhook Bitrix
-Skonfiguruj webhook w Bitrix żeby uderzał do:
-`https://twoj-n8n.com/webhook/bitrix-company-webhook`
-Event: ONCRMUPDATECOMPANY, payload: `{"data": {"FIELDS": {"ID": "$ID"}}}`
-
-## GUS SOAP
-- Produkcja: `https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc`
-- Test: `https://wyszukiwarkaregontest.stat.gov.pl/wsBIR/UslugaBIRzworny.svc`
 
 ## Walidacja NIP
 Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 
-## Testy
-1. Test webhook - czy n8n odbiera z Bitrix
-2. Test błędnego NIP - czy przychodzi notyfikacja
-3. Test poprawnego NIP - czy GUS zwraca dane
-4. Test Firmao - czy klient został utworzony
-5. Test anty-pętli - druga edycja NIE uruchamia workflow (STATUS=OK)
+## Kolejne kroki do wykonania
+1. **Zdebugować GUS API** - sprawdzić czy klucz jest aktywny, może przetestować w Postman
+2. Po naprawie GUS - przetestować caly flow
+3. Skonfigurowac webhook w Bitrix (produkcyjny URL)
+4. Aktywowac workflow na produkcji
+
+## Przydatne linki
+- Portal API GUS: https://api.stat.gov.pl/Home/RegonApi
+- Dokumentacja BIR: https://regonapi.readthedocs.io/en/latest/bir_versions.html
