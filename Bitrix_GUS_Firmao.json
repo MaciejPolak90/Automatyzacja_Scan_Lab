@@ -18,7 +18,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\"status\": \"received\", \"companyId\": \"{{ $json.data.FIELDS.ID }}\"}"
+        "responseBody": "={\"status\": \"received\", \"companyId\": \"{{ $json.body.data.FIELDS.ID }}\"}"
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
@@ -35,7 +35,7 @@
           "parameters": [
             {
               "name": "ID",
-              "value": "={{ $json.data.FIELDS.ID }}"
+              "value": "={{ $json.body.data.FIELDS.ID }}"
             }
           ]
         },
