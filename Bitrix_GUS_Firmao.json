@@ -29,7 +29,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.BITRIX_WEBHOOK_URL }}crm.company.get",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.get",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -66,7 +66,7 @@
               }
             },
             {
-              "leftValue": "={{ $json.result.UF_CRM_GUS_SYNC_STATUS }}",
+              "leftValue": "={{ $json.result.UF_CRM_1769435766 }}",
               "rightValue": "OK",
               "operator": {
                 "type": "string",
@@ -137,7 +137,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/soap+xml",
-        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/Zaloguj</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:Zaloguj>\n      <ns:pKluczUzytkownika>{{ $env.GUS_API_KEY }}</ns:pKluczUzytkownika>\n    </ns:Zaloguj>\n  </soap:Body>\n</soap:Envelope>",
+        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/Zaloguj</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:Zaloguj>\n      <ns:pKluczUzytkownika>b901f957c1f847c79d06</ns:pKluczUzytkownika>\n    </ns:Zaloguj>\n  </soap:Body>\n</soap:Envelope>",
         "options": {
           "response": {
             "response": {
@@ -283,10 +283,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.BITRIX_WEBHOOK_URL }}crm.company.update",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.update",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"TITLE\": \"{{ $json.gusData.nazwa }}\",\n    \"ADDRESS\": \"{{ $json.gusData.adresPelny }}\",\n    \"ADDRESS_CITY\": \"{{ $json.gusData.miejscowosc }}\",\n    \"ADDRESS_POSTAL_CODE\": \"{{ $json.gusData.kodPocztowy }}\",\n    \"UF_CRM_REGON\": \"{{ $json.gusData.regon }}\",\n    \"UF_CRM_KRS\": \"{{ $json.gusData.krs }}\",\n    \"UF_CRM_GUS_SYNC_STATUS\": \"OK\",\n    \"UF_CRM_GUS_SYNC_MESSAGE\": \"\"\n  }\n}",
+        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"TITLE\": \"{{ $json.gusData.nazwa }}\",\n    \"ADDRESS\": \"{{ $json.gusData.adresPelny }}\",\n    \"ADDRESS_CITY\": \"{{ $json.gusData.miejscowosc }}\",\n    \"ADDRESS_POSTAL_CODE\": \"{{ $json.gusData.kodPocztowy }}\",\n    \"UF_CRM_1769435935\": \"{{ $json.gusData.regon }}\",\n    \"UF_CRM_1769435983\": \"{{ $json.gusData.krs }}\",\n    \"UF_CRM_1769435766\": \"OK\",\n    \"UF_CRM_1769435867\": \"\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -401,10 +401,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.BITRIX_WEBHOOK_URL }}crm.company.update",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.update",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"UF_CRM_GUS_SYNC_STATUS\": \"ERROR\",\n    \"UF_CRM_GUS_SYNC_MESSAGE\": \"{{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\"\n  }\n}",
+        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"UF_CRM_1769435766\": \"ERROR\",\n    \"UF_CRM_1769435867\": \"{{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -416,7 +416,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.BITRIX_WEBHOOK_URL }}im.notify",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/im.notify",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"to\": \"{{ $json.result.ASSIGNED_BY_ID }}\",\n  \"message\": \"[B]Błąd synchronizacji GUS[/B]\\n\\nFirma: {{ $json.result.TITLE }}\\nNIP: {{ $json.result.UF_CRM_661903D52335E }}\\n\\nPowód: {{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\\n\\n[URL=/crm/company/details/{{ $json.result.ID }}/]Otwórz firmę[/URL]\"\n}",
