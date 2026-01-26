@@ -1,29 +1,708 @@
 {
-  "name": "My workflow",
+  "name": "Bitrix-GUS-Firmao Sync",
   "nodes": [
     {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bitrix-company-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-trigger",
+      "name": "Webhook: Bitrix Company Update",
+      "webhookId": "bitrix-company-webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"received\", \"companyId\": \"{{ $json.data.FIELDS.ID }}\"}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [220, 0],
+      "id": "webhook-response",
+      "name": "Respond OK"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BITRIX_WEBHOOK_URL }}crm.company.get",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ID",
+              "value": "={{ $json.data.FIELDS.ID }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "id": "bitrix-get-company",
+      "name": "Bitrix: Pobierz firmę"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.result.UF_CRM_NIP }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "leftValue": "={{ $json.result.UF_CRM_GUS_SYNC_STATUS }}",
+              "rightValue": "OK",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, 0],
+      "id": "check-should-sync",
+      "name": "IF: Czy synchronizować?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalizacja i walidacja NIP\nconst rawNip = $input.first().json.result.UF_CRM_NIP || '';\n\n// 1. Normalizacja: usuń wszystko oprócz cyfr\nconst nip = rawNip.replace(/[^0-9]/g, '');\n\n// 2. Walidacja długości\nif (nip.length !== 10) {\n  return [{\n    json: {\n      ...$input.first().json,\n      nipNormalized: nip,\n      nipValid: false,\n      nipError: `NIP musi mieć 10 cyfr, podano: ${nip.length}`\n    }\n  }];\n}\n\n// 3. Walidacja checksum (wagi: 6,5,7,2,3,4,5,6,7)\nconst weights = [6, 5, 7, 2, 3, 4, 5, 6, 7];\nlet sum = 0;\nfor (let i = 0; i < 9; i++) {\n  sum += parseInt(nip[i]) * weights[i];\n}\nconst checksum = sum % 11;\nconst lastDigit = parseInt(nip[9]);\n\nif (checksum !== lastDigit) {\n  return [{\n    json: {\n      ...$input.first().json,\n      nipNormalized: nip,\n      nipValid: false,\n      nipError: `Nieprawidłowa suma kontrolna NIP`\n    }\n  }];\n}\n\n// NIP poprawny\nreturn [{\n  json: {\n    ...$input.first().json,\n    nipNormalized: nip,\n    nipValid: true,\n    nipError: null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -100],
+      "id": "validate-nip",
+      "name": "Waliduj NIP"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.nipValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1100, -100],
+      "id": "check-nip-valid",
+      "name": "IF: NIP poprawny?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/soap+xml; charset=utf-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/soap+xml",
+        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/Zaloguj</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:Zaloguj>\n      <ns:pKluczUzytkownika>{{ $env.GUS_API_KEY }}</ns:pKluczUzytkownika>\n    </ns:Zaloguj>\n  </soap:Body>\n</soap:Envelope>",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -200],
+      "id": "gus-login",
+      "name": "GUS: Zaloguj"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wyciągnij SID z odpowiedzi SOAP\nconst response = $input.first().json.data;\nconst sidMatch = response.match(/<ZaslogujResult>([^<]+)<\\/ZalogujResult>/);\n\nif (!sidMatch || !sidMatch[1]) {\n  throw new Error('Nie udało się zalogować do GUS - brak SID w odpowiedzi');\n}\n\nconst sid = sidMatch[1];\n\nreturn [{\n  json: {\n    ...$('Waliduj NIP').first().json,\n    gusSid: sid\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, -200],
+      "id": "parse-gus-sid",
+      "name": "Parsuj SID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/soap+xml; charset=utf-8"
+            },
+            {
+              "name": "sid",
+              "value": "={{ $json.gusSid }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/soap+xml",
+        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\" xmlns:dat=\"http://CIS/BIR/PUBL/2014/07/DataContract\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/DaneSzukajPodmioty</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:DaneSzukajPodmioty>\n      <ns:pParametryWyszukiwania>\n        <dat:Nip>{{ $json.nipNormalized }}</dat:Nip>\n      </ns:pParametryWyszukiwania>\n    </ns:DaneSzukajPodmioty>\n  </soap:Body>\n</soap:Envelope>",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, -200],
+      "id": "gus-search",
+      "name": "GUS: Szukaj po NIP"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsuj odpowiedź wyszukiwania GUS\nconst response = $input.first().json.data;\nconst prevData = $('Parsuj SID').first().json;\n\n// Wyciągnij REGON z odpowiedzi\nconst regonMatch = response.match(/<Regon>([^<]+)<\\/Regon>/);\nconst typMatch = response.match(/<Typ>([^<]+)<\\/Typ>/);\n\nif (!regonMatch || !regonMatch[1]) {\n  return [{\n    json: {\n      ...prevData,\n      gusFound: false,\n      gusError: 'Nie znaleziono firmy w GUS dla podanego NIP'\n    }\n  }];\n}\n\nconst regon = regonMatch[1];\nconst typ = typMatch ? typMatch[1] : 'P'; // P = osoba prawna, F = fizyczna\n\n// Określ nazwę raportu na podstawie typu i długości REGON\nlet raportName;\nif (typ === 'P') {\n  raportName = 'BIR11OsPrawna';\n} else if (typ === 'F') {\n  if (regon.length === 9) {\n    raportName = 'BIR11OsFizycznaDzworzytelnosc';\n  } else {\n    raportName = 'BIR11OsFizycznaDzialalnoscCeidg';\n  }\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    gusFound: true,\n    gusRegon: regon,\n    gusTyp: typ,\n    gusRaportName: raportName\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, -200],
+      "id": "parse-gus-search",
+      "name": "Parsuj wynik szukania"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.gusFound }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2200, -200],
+      "id": "check-gus-found",
+      "name": "IF: Znaleziono w GUS?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/soap+xml; charset=utf-8"
+            },
+            {
+              "name": "sid",
+              "value": "={{ $json.gusSid }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/soap+xml",
+        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/DanePobierzPelnyRaport</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:DanePobierzPelnyRaport>\n      <ns:pRegon>{{ $json.gusRegon }}</ns:pRegon>\n      <ns:pNazwaRaportu>{{ $json.gusRaportName }}</ns:pNazwaRaportu>\n    </ns:DanePobierzPelnyRaport>\n  </soap:Body>\n</soap:Envelope>",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, -300],
+      "id": "gus-report",
+      "name": "GUS: Pobierz raport"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsuj pełny raport GUS\nconst response = $input.first().json.data;\nconst prevData = $('Parsuj wynik szukania').first().json;\n\n// Funkcja pomocnicza do wyciągania wartości z XML\nfunction extractValue(xml, tagName) {\n  const regex = new RegExp(`<${tagName}>([^<]*)<\\/${tagName}>`);\n  const match = xml.match(regex);\n  return match ? match[1].trim() : '';\n}\n\n// Wyciągnij dane z raportu (różne pola dla osób prawnych i fizycznych)\nconst gusData = {\n  nazwa: extractValue(response, 'praw_nazwa') || extractValue(response, 'fiz_nazwa') || extractValue(response, 'Nazwa'),\n  ulica: extractValue(response, 'praw_adSiedzUlica_Nazwa') || extractValue(response, 'fiz_adSiedzUlica_Nazwa') || extractValue(response, 'Ulica'),\n  nrNieruchomosci: extractValue(response, 'praw_adSiedzNumerNieruchomosci') || extractValue(response, 'fiz_adSiedzNumerNieruchomosci') || extractValue(response, 'NrNieruchomosci'),\n  nrLokalu: extractValue(response, 'praw_adSiedzNumerLokalu') || extractValue(response, 'fiz_adSiedzNumerLokalu') || extractValue(response, 'NrLokalu'),\n  kodPocztowy: extractValue(response, 'praw_adSiedzKodPocztowy') || extractValue(response, 'fiz_adSiedzKodPocztowy') || extractValue(response, 'KodPocztowy'),\n  miejscowosc: extractValue(response, 'praw_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'fiz_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'Miejscowosc'),\n  regon: prevData.gusRegon,\n  krs: extractValue(response, 'praw_numerWRejestrzeEwidencji') || '',\n  pkd: extractValue(response, 'praw_pkdKod') || extractValue(response, 'fiz_pkdKod') || '',\n  formaPrawna: extractValue(response, 'praw_podstawowaFormaPrawna_Nazwa') || ''\n};\n\n// Zbuduj pełny adres\ngusData.adresPelny = [\n  gusData.ulica,\n  gusData.nrNieruchomosci + (gusData.nrLokalu ? '/' + gusData.nrLokalu : '')\n].filter(Boolean).join(' ');\n\nreturn [{\n  json: {\n    ...prevData,\n    gusData: gusData\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, -300],
+      "id": "parse-gus-report",
+      "name": "Parsuj raport GUS"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITRIX_WEBHOOK_URL }}crm.company.update",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"TITLE\": \"{{ $json.gusData.nazwa }}\",\n    \"ADDRESS\": \"{{ $json.gusData.adresPelny }}\",\n    \"ADDRESS_CITY\": \"{{ $json.gusData.miejscowosc }}\",\n    \"ADDRESS_POSTAL_CODE\": \"{{ $json.gusData.kodPocztowy }}\",\n    \"UF_CRM_REGON\": \"{{ $json.gusData.regon }}\",\n    \"UF_CRM_KRS\": \"{{ $json.gusData.krs }}\",\n    \"UF_CRM_GUS_SYNC_STATUS\": \"OK\",\n    \"UF_CRM_GUS_SYNC_MESSAGE\": \"\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, -300],
+      "id": "bitrix-update-success",
+      "name": "Bitrix: Aktualizuj (sukces)"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.FIRMAO_API_URL }}/customers",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filters",
+              "value": "={\"nip\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\"}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3080, -300],
+      "id": "firmao-search",
+      "name": "Firmao: Szukaj klienta",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "FIRMAO_CREDENTIALS_ID",
+          "name": "Firmao API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3300, -300],
+      "id": "check-firmao-exists",
+      "name": "IF: Klient istnieje?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.FIRMAO_API_URL }}/customers",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}\",\n  \"nip\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\",\n  \"regon\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": \"{{ $('Parsuj raport GUS').first().json.gusData.krs }}\",\n  \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n  \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n  \"postalCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n  \"mainPkd\": \"{{ $('Parsuj raport GUS').first().json.gusData.pkd }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3520, -400],
+      "id": "firmao-create",
+      "name": "Firmao: Utwórz klienta",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "FIRMAO_CREDENTIALS_ID",
+          "name": "Firmao API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.FIRMAO_API_URL }}/customers/{{ $json[0].id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}\",\n  \"regon\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": \"{{ $('Parsuj raport GUS').first().json.gusData.krs }}\",\n  \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n  \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n  \"postalCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n  \"mainPkd\": \"{{ $('Parsuj raport GUS').first().json.gusData.pkd }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3520, -200],
+      "id": "firmao-update",
+      "name": "Firmao: Aktualizuj klienta",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "FIRMAO_CREDENTIALS_ID",
+          "name": "Firmao API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITRIX_WEBHOOK_URL }}crm.company.update",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"UF_CRM_GUS_SYNC_STATUS\": \"ERROR\",\n    \"UF_CRM_GUS_SYNC_MESSAGE\": \"{{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 100],
+      "id": "bitrix-set-error",
+      "name": "Bitrix: Ustaw ERROR"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITRIX_WEBHOOK_URL }}im.notify",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $json.result.ASSIGNED_BY_ID }}\",\n  \"message\": \"[B]Błąd synchronizacji GUS[/B]\\n\\nFirma: {{ $json.result.TITLE }}\\nNIP: {{ $json.result.UF_CRM_NIP }}\\n\\nPowód: {{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\\n\\n[URL=/crm/company/details/{{ $json.result.ID }}/]Otwórz firmę[/URL]\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 100],
+      "id": "bitrix-notify-error",
+      "name": "Bitrix: Notyfikacja błędu"
+    },
+    {
       "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
+      "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ],
-      "id": "ab3eb377-5519-460f-930e-b44c4b88a9ec",
-      "name": "When clicking ‘Execute workflow’"
+      "position": [880, 100],
+      "id": "skip-sync",
+      "name": "Pomiń (już zsync lub brak NIP)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [3740, -300],
+      "id": "end-success",
+      "name": "Koniec (sukces)"
     }
   ],
   "pinData": {},
-  "connections": {},
+  "connections": {
+    "Webhook: Bitrix Company Update": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Bitrix: Pobierz firmę",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bitrix: Pobierz firmę": {
+      "main": [
+        [
+          {
+            "node": "IF: Czy synchronizować?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Czy synchronizować?": {
+      "main": [
+        [
+          {
+            "node": "Waliduj NIP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pomiń (już zsync lub brak NIP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Waliduj NIP": {
+      "main": [
+        [
+          {
+            "node": "IF: NIP poprawny?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: NIP poprawny?": {
+      "main": [
+        [
+          {
+            "node": "GUS: Zaloguj",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bitrix: Ustaw ERROR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GUS: Zaloguj": {
+      "main": [
+        [
+          {
+            "node": "Parsuj SID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj SID": {
+      "main": [
+        [
+          {
+            "node": "GUS: Szukaj po NIP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GUS: Szukaj po NIP": {
+      "main": [
+        [
+          {
+            "node": "Parsuj wynik szukania",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj wynik szukania": {
+      "main": [
+        [
+          {
+            "node": "IF: Znaleziono w GUS?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Znaleziono w GUS?": {
+      "main": [
+        [
+          {
+            "node": "GUS: Pobierz raport",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bitrix: Ustaw ERROR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GUS: Pobierz raport": {
+      "main": [
+        [
+          {
+            "node": "Parsuj raport GUS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj raport GUS": {
+      "main": [
+        [
+          {
+            "node": "Bitrix: Aktualizuj (sukces)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bitrix: Aktualizuj (sukces)": {
+      "main": [
+        [
+          {
+            "node": "Firmao: Szukaj klienta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firmao: Szukaj klienta": {
+      "main": [
+        [
+          {
+            "node": "IF: Klient istnieje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Klient istnieje?": {
+      "main": [
+        [
+          {
+            "node": "Firmao: Aktualizuj klienta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Firmao: Utwórz klienta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firmao: Utwórz klienta": {
+      "main": [
+        [
+          {
+            "node": "Koniec (sukces)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firmao: Aktualizuj klienta": {
+      "main": [
+        [
+          {
+            "node": "Koniec (sukces)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bitrix: Ustaw ERROR": {
+      "main": [
+        [
+          {
+            "node": "Bitrix: Notyfikacja błędu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "availableInMCP": false
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "c9e5ee13-233c-4086-b626-6c61c3b47920",
+  "versionId": "1",
   "meta": {
+    "templateCredsSetupCompleted": false,
     "instanceId": "03225ed10ba8421489a5d20fa2487cf89651d5d0fcd1776a5148a83a88891098"
   },
-  "id": "v-NAXiYrotdAEBkh-Twcl",
-  "tags": []
+  "id": "bitrix-gus-firmao-sync",
+  "tags": [
+    {
+      "name": "Bitrix",
+      "id": "bitrix"
+    },
+    {
+      "name": "GUS",
+      "id": "gus"
+    },
+    {
+      "name": "Firmao",
+      "id": "firmao"
+    }
+  ]
 }
