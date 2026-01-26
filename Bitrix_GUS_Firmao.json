@@ -124,7 +124,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -137,7 +137,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/soap+xml",
-        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/Zaloguj</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:Zaloguj>\n      <ns:pKluczUzytkownika>b901f957c1f847c79d06</ns:pKluczUzytkownika>\n    </ns:Zaloguj>\n  </soap:Body>\n</soap:Envelope>",
+        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/Zaloguj</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:Zaloguj>\n      <ns:pKluczUzytkownika>b901f957c1f847c79d06</ns:pKluczUzytkownika>\n    </ns:Zaloguj>\n  </soap:Body>\n</soap:Envelope>",
         "options": {
           "response": {
             "response": {
@@ -165,7 +165,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -182,7 +182,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/soap+xml",
-        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\" xmlns:dat=\"http://CIS/BIR/PUBL/2014/07/DataContract\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/DaneSzukajPodmioty</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:DaneSzukajPodmioty>\n      <ns:pParametryWyszukiwania>\n        <dat:Nip>{{ $json.nipNormalized }}</dat:Nip>\n      </ns:pParametryWyszukiwania>\n    </ns:DaneSzukajPodmioty>\n  </soap:Body>\n</soap:Envelope>",
+        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\" xmlns:dat=\"http://CIS/BIR/PUBL/2014/07/DataContract\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/DaneSzukajPodmioty</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:DaneSzukajPodmioty>\n      <ns:pParametryWyszukiwania>\n        <dat:Nip>{{ $json.nipNormalized }}</dat:Nip>\n      </ns:pParametryWyszukiwania>\n    </ns:DaneSzukajPodmioty>\n  </soap:Body>\n</soap:Envelope>",
         "options": {
           "response": {
             "response": {
@@ -238,7 +238,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -255,7 +255,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/soap+xml",
-        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzworny.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/DanePobierzPelnyRaport</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:DanePobierzPelnyRaport>\n      <ns:pRegon>{{ $json.gusRegon }}</ns:pRegon>\n      <ns:pNazwaRaportu>{{ $json.gusRaportName }}</ns:pNazwaRaportu>\n    </ns:DanePobierzPelnyRaport>\n  </soap:Body>\n</soap:Envelope>",
+        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzworny/DanePobierzPelnyRaport</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:DanePobierzPelnyRaport>\n      <ns:pRegon>{{ $json.gusRegon }}</ns:pRegon>\n      <ns:pNazwaRaportu>{{ $json.gusRaportName }}</ns:pNazwaRaportu>\n    </ns:DanePobierzPelnyRaport>\n  </soap:Body>\n</soap:Envelope>",
         "options": {
           "response": {
             "response": {
