@@ -298,7 +298,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.FIRMAO_API_URL }}/customers",
+        "url": "=https://system.firmao.pl/scanlab/api/customers",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendQuery": true,
@@ -355,7 +355,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.FIRMAO_API_URL }}/customers",
+        "url": "=https://system.firmao.pl/scanlab/api/customers",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
@@ -378,7 +378,7 @@
     {
       "parameters": {
         "method": "PUT",
-        "url": "={{ $env.FIRMAO_API_URL }}/customers/{{ $json[0].id }}",
+        "url": "=https://system.firmao.pl/scanlab/api/customers/{{ $json[0].id }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
