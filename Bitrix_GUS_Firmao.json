@@ -58,7 +58,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "leftValue": "={{ $json.result.UF_CRM_NIP }}",
+              "leftValue": "={{ $json.result.UF_CRM_661903D52335E }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -85,7 +85,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Normalizacja i walidacja NIP\nconst rawNip = $input.first().json.result.UF_CRM_NIP || '';\n\n// 1. Normalizacja: usuń wszystko oprócz cyfr\nconst nip = rawNip.replace(/[^0-9]/g, '');\n\n// 2. Walidacja długości\nif (nip.length !== 10) {\n  return [{\n    json: {\n      ...$input.first().json,\n      nipNormalized: nip,\n      nipValid: false,\n      nipError: `NIP musi mieć 10 cyfr, podano: ${nip.length}`\n    }\n  }];\n}\n\n// 3. Walidacja checksum (wagi: 6,5,7,2,3,4,5,6,7)\nconst weights = [6, 5, 7, 2, 3, 4, 5, 6, 7];\nlet sum = 0;\nfor (let i = 0; i < 9; i++) {\n  sum += parseInt(nip[i]) * weights[i];\n}\nconst checksum = sum % 11;\nconst lastDigit = parseInt(nip[9]);\n\nif (checksum !== lastDigit) {\n  return [{\n    json: {\n      ...$input.first().json,\n      nipNormalized: nip,\n      nipValid: false,\n      nipError: `Nieprawidłowa suma kontrolna NIP`\n    }\n  }];\n}\n\n// NIP poprawny\nreturn [{\n  json: {\n    ...$input.first().json,\n    nipNormalized: nip,\n    nipValid: true,\n    nipError: null\n  }\n}];"
+        "jsCode": "// Normalizacja i walidacja NIP\nconst rawNip = $input.first().json.result.UF_CRM_661903D52335E || '';\n\n// 1. Normalizacja: usuń wszystko oprócz cyfr\nconst nip = rawNip.replace(/[^0-9]/g, '');\n\n// 2. Walidacja długości\nif (nip.length !== 10) {\n  return [{\n    json: {\n      ...$input.first().json,\n      nipNormalized: nip,\n      nipValid: false,\n      nipError: `NIP musi mieć 10 cyfr, podano: ${nip.length}`\n    }\n  }];\n}\n\n// 3. Walidacja checksum (wagi: 6,5,7,2,3,4,5,6,7)\nconst weights = [6, 5, 7, 2, 3, 4, 5, 6, 7];\nlet sum = 0;\nfor (let i = 0; i < 9; i++) {\n  sum += parseInt(nip[i]) * weights[i];\n}\nconst checksum = sum % 11;\nconst lastDigit = parseInt(nip[9]);\n\nif (checksum !== lastDigit) {\n  return [{\n    json: {\n      ...$input.first().json,\n      nipNormalized: nip,\n      nipValid: false,\n      nipError: `Nieprawidłowa suma kontrolna NIP`\n    }\n  }];\n}\n\n// NIP poprawny\nreturn [{\n  json: {\n    ...$input.first().json,\n    nipNormalized: nip,\n    nipValid: true,\n    nipError: null\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -419,7 +419,7 @@
         "url": "={{ $env.BITRIX_WEBHOOK_URL }}im.notify",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"to\": \"{{ $json.result.ASSIGNED_BY_ID }}\",\n  \"message\": \"[B]Błąd synchronizacji GUS[/B]\\n\\nFirma: {{ $json.result.TITLE }}\\nNIP: {{ $json.result.UF_CRM_NIP }}\\n\\nPowód: {{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\\n\\n[URL=/crm/company/details/{{ $json.result.ID }}/]Otwórz firmę[/URL]\"\n}",
+        "jsonBody": "={\n  \"to\": \"{{ $json.result.ASSIGNED_BY_ID }}\",\n  \"message\": \"[B]Błąd synchronizacji GUS[/B]\\n\\nFirma: {{ $json.result.TITLE }}\\nNIP: {{ $json.result.UF_CRM_661903D52335E }}\\n\\nPowód: {{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\\n\\n[URL=/crm/company/details/{{ $json.result.ID }}/]Otwórz firmę[/URL]\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
