@@ -35,7 +35,7 @@
           "parameters": [
             {
               "name": "ID",
-              "value": "={{ $json.body.data.FIELDS.ID }}"
+              "value": "={{ $json.body.data?.FIELDS?.ID ?? $json.body.COMPANY_ID }}"
             }
           ]
         },
@@ -124,27 +124,20 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc/ajaxEndpoint/Zaloguj",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
-              "value": "application/soap+xml; charset=utf-8"
+              "value": "application/json"
             }
           ]
         },
         "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/soap+xml",
-        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzewnPubl/Zaloguj</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:Zaloguj>\n      <ns:pKluczUzytkownika>b901f957c1f847c79d06</ns:pKluczUzytkownika>\n    </ns:Zaloguj>\n  </soap:Body>\n</soap:Envelope>",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
+        "specifyBody": "json",
+        "jsonBody": "={\"pKluczUzytkownika\": \"b901f957c1f847c79d06\"}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -154,7 +147,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Wyciągnij SID z odpowiedzi SOAP\nconst response = $input.first().json.data;\nconst sidMatch = response.match(/<ZaslogujResult>([^<]+)<\\/ZalogujResult>/);\n\nif (!sidMatch || !sidMatch[1]) {\n  throw new Error('Nie udało się zalogować do GUS - brak SID w odpowiedzi');\n}\n\nconst sid = sidMatch[1];\n\nreturn [{\n  json: {\n    ...$('Waliduj NIP').first().json,\n    gusSid: sid\n  }\n}];"
+        "jsCode": "// Wyciągnij SID z odpowiedzi JSON\nconst sid = $input.first().json.d;\n\nif (!sid) {\n  throw new Error('GUS login failed: ' + JSON.stringify($input.first().json));\n}\n\nreturn [{ json: { ...$('Waliduj NIP').first().json, gusSid: sid } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -165,13 +158,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc/ajaxEndpoint/daneSzukajPodmioty",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
-              "value": "application/soap+xml; charset=utf-8"
+              "value": "application/json"
             },
             {
               "name": "sid",
@@ -180,16 +173,9 @@
           ]
         },
         "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/soap+xml",
-        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\" xmlns:dat=\"http://CIS/BIR/PUBL/2014/07/DataContract\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzewnPubl/DaneSzukajPodmioty</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:DaneSzukajPodmioty>\n      <ns:pParametryWyszukiwania>\n        <dat:Nip>{{ $json.nipNormalized }}</dat:Nip>\n      </ns:pParametryWyszukiwania>\n    </ns:DaneSzukajPodmioty>\n  </soap:Body>\n</soap:Envelope>",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
+        "specifyBody": "json",
+        "jsonBody": "={\"pParametryWyszukiwania\": {\"Nip\": \"{{ $json.nipNormalized }}\"}}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -199,7 +185,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parsuj odpowiedź wyszukiwania GUS\nconst response = $input.first().json.data;\nconst prevData = $('Parsuj SID').first().json;\n\n// Wyciągnij REGON z odpowiedzi\nconst regonMatch = response.match(/<Regon>([^<]+)<\\/Regon>/);\nconst typMatch = response.match(/<Typ>([^<]+)<\\/Typ>/);\n\nif (!regonMatch || !regonMatch[1]) {\n  return [{\n    json: {\n      ...prevData,\n      gusFound: false,\n      gusError: 'Nie znaleziono firmy w GUS dla podanego NIP'\n    }\n  }];\n}\n\nconst regon = regonMatch[1];\nconst typ = typMatch ? typMatch[1] : 'P'; // P = osoba prawna, F = fizyczna\n\n// Określ nazwę raportu na podstawie typu i długości REGON\nlet raportName;\nif (typ === 'P') {\n  raportName = 'BIR11OsPrawna';\n} else if (typ === 'F') {\n  if (regon.length === 9) {\n    raportName = 'BIR11OsFizycznaDzworzytelnosc';\n  } else {\n    raportName = 'BIR11OsFizycznaDzialalnoscCeidg';\n  }\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    gusFound: true,\n    gusRegon: regon,\n    gusTyp: typ,\n    gusRaportName: raportName\n  }\n}];"
+        "jsCode": "// Parsuj odpowiedź wyszukiwania GUS (JSON endpoint zwraca XML w polu 'd')\nconst response = $input.first().json.d || '';\nconst prevData = $('Parsuj SID').first().json;\n\n// Wyciągnij REGON z odpowiedzi\nconst regonMatch = response.match(/<Regon>([^<]+)<\\/Regon>/);\nconst typMatch = response.match(/<Typ>([^<]+)<\\/Typ>/);\nconst silosMatch = response.match(/<SilosID>([^<]+)<\\/SilosID>/);\n\nif (!regonMatch || !regonMatch[1]) {\n  return [{\n    json: {\n      ...prevData,\n      gusFound: false,\n      gusError: 'Nie znaleziono firmy w GUS dla podanego NIP'\n    }\n  }];\n}\n\nconst regon = regonMatch[1];\nconst typ = typMatch ? typMatch[1] : 'P'; // P = osoba prawna, F = fizyczna\nconst silosId = silosMatch ? silosMatch[1] : '';\n\n// Określ nazwę raportu na podstawie typu i SilosID\nlet raportName;\nif (typ === 'P') {\n  raportName = 'BIR11OsPrawna';\n} else if (typ === 'F') {\n  // SilosID dla osób fizycznych: 1=CEIDG, 2=rolnicza, 3=pozostała, 4=skreślona\n  if (silosId === '1') {\n    raportName = 'BIR11OsFizycznaDzialalnoscCeidg';\n  } else if (silosId === '2') {\n    raportName = 'BIR11OsFizycznaDzialalnoscRolnicza';\n  } else if (silosId === '3') {\n    raportName = 'BIR11OsFizycznaDzialalnoscPozostala';\n  } else if (silosId === '4') {\n    raportName = 'BIR11OsFizycznaDzialalnoscSkreslonaDo20141108';\n  } else {\n    raportName = 'BIR11OsFizycznaDzialalnoscCeidg'; // domyślnie CEIDG\n  }\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    gusFound: true,\n    gusRegon: regon,\n    gusTyp: typ,\n    gusSilosId: silosId,\n    gusRaportName: raportName\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -238,13 +224,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc",
+        "url": "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc/ajaxEndpoint/DanePobierzPelnyRaport",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
-              "value": "application/soap+xml; charset=utf-8"
+              "value": "application/json"
             },
             {
               "name": "sid",
@@ -253,16 +239,9 @@
           ]
         },
         "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/soap+xml",
-        "body": "=<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:ns=\"http://CIS/BIR/PUBL/2014/07\">\n  <soap:Header xmlns:wsa=\"http://www.w3.org/2005/08/addressing\">\n    <wsa:To>https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc</wsa:To>\n    <wsa:Action>http://CIS/BIR/PUBL/2014/07/IUslugaBIRzewnPubl/DanePobierzPelnyRaport</wsa:Action>\n  </soap:Header>\n  <soap:Body>\n    <ns:DanePobierzPelnyRaport>\n      <ns:pRegon>{{ $json.gusRegon }}</ns:pRegon>\n      <ns:pNazwaRaportu>{{ $json.gusRaportName }}</ns:pNazwaRaportu>\n    </ns:DanePobierzPelnyRaport>\n  </soap:Body>\n</soap:Envelope>",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
+        "specifyBody": "json",
+        "jsonBody": "={\"pRegon\": \"{{ $json.gusRegon }}\", \"pNazwaRaportu\": \"{{ $json.gusRaportName }}\"}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -272,7 +251,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parsuj pełny raport GUS\nconst response = $input.first().json.data;\nconst prevData = $('Parsuj wynik szukania').first().json;\n\n// Funkcja pomocnicza do wyciągania wartości z XML\nfunction extractValue(xml, tagName) {\n  const regex = new RegExp(`<${tagName}>([^<]*)<\\/${tagName}>`);\n  const match = xml.match(regex);\n  return match ? match[1].trim() : '';\n}\n\n// Wyciągnij dane z raportu (różne pola dla osób prawnych i fizycznych)\nconst gusData = {\n  nazwa: extractValue(response, 'praw_nazwa') || extractValue(response, 'fiz_nazwa') || extractValue(response, 'Nazwa'),\n  ulica: extractValue(response, 'praw_adSiedzUlica_Nazwa') || extractValue(response, 'fiz_adSiedzUlica_Nazwa') || extractValue(response, 'Ulica'),\n  nrNieruchomosci: extractValue(response, 'praw_adSiedzNumerNieruchomosci') || extractValue(response, 'fiz_adSiedzNumerNieruchomosci') || extractValue(response, 'NrNieruchomosci'),\n  nrLokalu: extractValue(response, 'praw_adSiedzNumerLokalu') || extractValue(response, 'fiz_adSiedzNumerLokalu') || extractValue(response, 'NrLokalu'),\n  kodPocztowy: extractValue(response, 'praw_adSiedzKodPocztowy') || extractValue(response, 'fiz_adSiedzKodPocztowy') || extractValue(response, 'KodPocztowy'),\n  miejscowosc: extractValue(response, 'praw_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'fiz_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'Miejscowosc'),\n  regon: prevData.gusRegon,\n  krs: extractValue(response, 'praw_numerWRejestrzeEwidencji') || '',\n  pkd: extractValue(response, 'praw_pkdKod') || extractValue(response, 'fiz_pkdKod') || '',\n  formaPrawna: extractValue(response, 'praw_podstawowaFormaPrawna_Nazwa') || ''\n};\n\n// Zbuduj pełny adres\ngusData.adresPelny = [\n  gusData.ulica,\n  gusData.nrNieruchomosci + (gusData.nrLokalu ? '/' + gusData.nrLokalu : '')\n].filter(Boolean).join(' ');\n\nreturn [{\n  json: {\n    ...prevData,\n    gusData: gusData\n  }\n}];"
+        "jsCode": "// Parsuj pełny raport GUS (JSON endpoint zwraca XML w polu 'd')\nconst response = $input.first().json.d || '';\nconst prevData = $('Parsuj wynik szukania').first().json;\n\n// Funkcja pomocnicza do wyciągania wartości z XML\nfunction extractValue(xml, tagName) {\n  const regex = new RegExp(`<${tagName}>([^<]*)<\\/${tagName}>`);\n  const match = xml.match(regex);\n  return match ? match[1].trim() : '';\n}\n\n// Wyciągnij dane z raportu (różne pola dla osób prawnych i fizycznych)\nconst gusData = {\n  nazwa: extractValue(response, 'praw_nazwa') || extractValue(response, 'fiz_nazwa') || extractValue(response, 'Nazwa'),\n  ulica: extractValue(response, 'praw_adSiedzUlica_Nazwa') || extractValue(response, 'fiz_adSiedzUlica_Nazwa') || extractValue(response, 'Ulica'),\n  nrNieruchomosci: extractValue(response, 'praw_adSiedzNumerNieruchomosci') || extractValue(response, 'fiz_adSiedzNumerNieruchomosci') || extractValue(response, 'NrNieruchomosci'),\n  nrLokalu: extractValue(response, 'praw_adSiedzNumerLokalu') || extractValue(response, 'fiz_adSiedzNumerLokalu') || extractValue(response, 'NrLokalu'),\n  kodPocztowy: extractValue(response, 'praw_adSiedzKodPocztowy') || extractValue(response, 'fiz_adSiedzKodPocztowy') || extractValue(response, 'KodPocztowy'),\n  miejscowosc: extractValue(response, 'praw_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'fiz_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'Miejscowosc'),\n  regon: prevData.gusRegon,\n  krs: extractValue(response, 'praw_numerWRejestrzeEwidencji') || '',\n  pkd: extractValue(response, 'praw_pkdKod') || extractValue(response, 'fiz_pkdKod') || '',\n  formaPrawna: extractValue(response, 'praw_podstawowaFormaPrawna_Nazwa') || ''\n};\n\n// Zbuduj pełny adres\ngusData.adresPelny = [\n  gusData.ulica,\n  gusData.nrNieruchomosci + (gusData.nrLokalu ? '/' + gusData.nrLokalu : '')\n].filter(Boolean).join(' ');\n\nreturn [{\n  json: {\n    ...prevData,\n    gusData: gusData\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -298,7 +277,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://system.firmao.pl/scanlab/api/customers",
+        "url": "=https://system.firmao.pl/scanlab/svc/v1/customers",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendQuery": true,
@@ -306,7 +285,7 @@
           "parameters": [
             {
               "name": "filters",
-              "value": "={\"nip\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\"}"
+              "value": "={\"nipNumber\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\"}"
             }
           ]
         },
@@ -355,12 +334,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://system.firmao.pl/scanlab/api/customers",
+        "url": "=https://system.firmao.pl/scanlab/svc/v1/customers",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}\",\n  \"nip\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\",\n  \"regon\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": \"{{ $('Parsuj raport GUS').first().json.gusData.krs }}\",\n  \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n  \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n  \"postalCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n  \"mainPkd\": \"{{ $('Parsuj raport GUS').first().json.gusData.pkd }}\"\n}",
+        "jsonBody": "={\n  \"label\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa.substring(0, 50) }}\",\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}\",\n  \"nipNumber\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\",\n  \"identificationNumber\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": \"{{ $('Parsuj raport GUS').first().json.gusData.krs || null }}\",\n  \"officeAddress\": {\n    \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n    \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n    \"postCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n    \"country\": \"Polska\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -378,12 +357,12 @@
     {
       "parameters": {
         "method": "PUT",
-        "url": "=https://system.firmao.pl/scanlab/api/customers/{{ $json[0].id }}",
+        "url": "=https://system.firmao.pl/scanlab/svc/v1/customers/{{ $json[0].id }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}\",\n  \"regon\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": \"{{ $('Parsuj raport GUS').first().json.gusData.krs }}\",\n  \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n  \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n  \"postalCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n  \"mainPkd\": \"{{ $('Parsuj raport GUS').first().json.gusData.pkd }}\"\n}",
+        "jsonBody": "={\n  \"label\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa.substring(0, 50) }}\",\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}\",\n  \"identificationNumber\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": \"{{ $('Parsuj raport GUS').first().json.gusData.krs || null }}\",\n  \"officeAddress\": {\n    \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n    \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n    \"postCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n    \"country\": \"Polska\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
