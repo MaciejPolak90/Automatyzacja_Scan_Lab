@@ -19,7 +19,7 @@
 ### Bitrix24
 - **Webhook URL:** `https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/`
 - **Pole NIP:** `UF_CRM_661903D52335E`
-- **Pole Status GUS:** `UF_CRM_1769435766`
+- **Pole Status GUS:** `UF_CRM_1769435766` (lista: PENDING=1384, OK=1386, ERROR=1388)
 - **Pole Komunikat GUS:** `UF_CRM_1769435867`
 - **Pole REGON:** `UF_CRM_1769435935`
 - **Pole KRS:** `UF_CRM_1769435983`
@@ -94,11 +94,12 @@ Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 - **Rozwiazanie:** URL: `/svc/v1/` (nie `/api/`), pola: `nipNumber`, `identificationNumber`
 
 ## Kolejne kroki do wykonania
-1. **Dokonczyc Firmao** - ustalic jak zapisywac adres
-2. **Dodac _TEST do nazwy** - przy tworzeniu klienta w Firmao (na czas testow)
-3. Po naprawie - przetestowac caly flow
-4. Skonfigurowac webhook w Bitrix (produkcyjny URL)
-5. Usunac _TEST i aktywowac workflow na produkcji
+1. ~~**Dokonczyc Firmao** - ustalic jak zapisywac adres~~ DONE (officeAddress dziala)
+2. ~~**Dodac _TEST do nazwy** - przy tworzeniu klienta w Firmao~~ DONE
+3. ~~**Poprawic Status GUS** - zmienione na ID listy (OK=1386, ERROR=1388)~~ DONE
+4. **Przetestowac caly flow** - zaimportowac nowy JSON do n8n
+5. Skonfigurowac webhook w Bitrix (produkcyjny URL)
+6. Usunac _TEST i aktywowac workflow na produkcji
 
 ## Testowanie webhook (curl)
 ```bash

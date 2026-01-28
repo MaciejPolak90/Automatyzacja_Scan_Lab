@@ -67,7 +67,7 @@
             },
             {
               "leftValue": "={{ $json.result.UF_CRM_1769435766 }}",
-              "rightValue": "OK",
+              "rightValue": "1386",
               "operator": {
                 "type": "string",
                 "operation": "notEquals"
@@ -265,7 +265,7 @@
         "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.update",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"TITLE\": \"{{ $json.gusData.nazwa }}\",\n    \"ADDRESS\": \"{{ $json.gusData.adresPelny }}\",\n    \"ADDRESS_CITY\": \"{{ $json.gusData.miejscowosc }}\",\n    \"ADDRESS_POSTAL_CODE\": \"{{ $json.gusData.kodPocztowy }}\",\n    \"UF_CRM_1769435935\": \"{{ $json.gusData.regon }}\",\n    \"UF_CRM_1769435983\": \"{{ $json.gusData.krs }}\",\n    \"UF_CRM_1769435766\": \"OK\",\n    \"UF_CRM_1769435867\": \"\"\n  }\n}",
+        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"TITLE\": \"{{ $json.gusData.nazwa }}\",\n    \"ADDRESS\": \"{{ $json.gusData.adresPelny }}\",\n    \"ADDRESS_CITY\": \"{{ $json.gusData.miejscowosc }}\",\n    \"ADDRESS_POSTAL_CODE\": \"{{ $json.gusData.kodPocztowy }}\",\n    \"UF_CRM_1769435935\": \"{{ $json.gusData.regon }}\",\n    \"UF_CRM_1769435983\": \"{{ $json.gusData.krs }}\",\n    \"UF_CRM_1769435766\": 1386,\n    \"UF_CRM_1769435867\": \"\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -314,7 +314,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "leftValue": "={{ $json.length }}",
+              "leftValue": "={{ $json.data.length }}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
@@ -339,7 +339,7 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"label\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa.substring(0, 50) }}\",\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}\",\n  \"nipNumber\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\",\n  \"identificationNumber\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": \"{{ $('Parsuj raport GUS').first().json.gusData.krs || null }}\",\n  \"officeAddress\": {\n    \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n    \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n    \"postCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n    \"country\": \"Polska\"\n  }\n}",
+        "jsonBody": "={\n  \"label\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa.substring(0, 44) }}_TEST\",\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}_TEST\",\n  \"nipNumber\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\",\n  \"identificationNumber\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": {{ $('Parsuj raport GUS').first().json.gusData.krs ? '\"' + $('Parsuj raport GUS').first().json.gusData.krs + '\"' : 'null' }},\n  \"officeAddress\": {\n    \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n    \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n    \"postCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n    \"country\": \"Polska\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -357,7 +357,7 @@
     {
       "parameters": {
         "method": "PUT",
-        "url": "=https://system.firmao.pl/scanlab/svc/v1/customers/{{ $json[0].id }}",
+        "url": "=https://system.firmao.pl/scanlab/svc/v1/customers/{{ $json.data[0].id }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
@@ -383,7 +383,7 @@
         "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.update",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"UF_CRM_1769435766\": \"ERROR\",\n    \"UF_CRM_1769435867\": \"{{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\"\n  }\n}",
+        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"UF_CRM_1769435766\": 1388,\n    \"UF_CRM_1769435867\": \"{{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -610,7 +610,7 @@
       "main": [
         [
           {
-            "node": "Firmao: Aktualizuj klienta",
+            "node": "Koniec (sukces)",
             "type": "main",
             "index": 0
           }
@@ -625,17 +625,6 @@
       ]
     },
     "Firmao: Utwórz klienta": {
-      "main": [
-        [
-          {
-            "node": "Koniec (sukces)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Firmao: Aktualizuj klienta": {
       "main": [
         [
           {
