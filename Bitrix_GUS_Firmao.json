@@ -1,5 +1,5 @@
 {
-  "name": "Bitrix-GUS-Firmao Sync",
+  "name": "Bitrix-GUS-Firmao Sync v2",
   "nodes": [
     {
       "parameters": {
@@ -10,25 +10,31 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
-      "id": "webhook-trigger",
+      "position": [
+        -20928,
+        1008
+      ],
+      "id": "66bb8940-fee8-4e29-be80-a65bd28b31a6",
       "name": "Webhook: Bitrix Company Update",
       "webhookId": "bitrix-company-webhook"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\"status\": \"received\", \"companyId\": \"{{ $json.body.data.FIELDS.ID }}\"}"
+        "responseBody": "={\"status\": \"received\", \"companyId\": \"{{ $json.body.data.FIELDS.ID }}\"}",
+        "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [220, 0],
-      "id": "webhook-response",
+      "position": [
+        -20704,
+        1008
+      ],
+      "id": "9ca7748f-384a-4e23-ae71-8cc9507b25b8",
       "name": "Respond OK"
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.get",
         "sendQuery": true,
         "queryParameters": {
@@ -43,8 +49,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [440, 0],
-      "id": "bitrix-get-company",
+      "position": [
+        -20496,
+        1008
+      ],
+      "id": "21d756ac-5678-4d95-8681-9ea82fd924d2",
       "name": "Bitrix: Pobierz firmę"
     },
     {
@@ -79,8 +88,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [660, 0],
-      "id": "check-should-sync",
+      "position": [
+        -20272,
+        1008
+      ],
+      "id": "5fbafa21-bc74-4aec-92a7-afb953644464",
       "name": "IF: Czy synchronizować?"
     },
     {
@@ -89,8 +101,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, -100],
-      "id": "validate-nip",
+      "position": [
+        -20048,
+        912
+      ],
+      "id": "ffcc8dd1-c745-4692-9eb0-c15a230ff62a",
       "name": "Waliduj NIP"
     },
     {
@@ -117,8 +132,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1100, -100],
-      "id": "check-nip-valid",
+      "position": [
+        -19824,
+        912
+      ],
+      "id": "6509453e-14b8-451a-82ca-f8767c40fd94",
       "name": "IF: NIP poprawny?"
     },
     {
@@ -141,8 +159,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, -200],
-      "id": "gus-login",
+      "position": [
+        -19616,
+        816
+      ],
+      "id": "dc8b5917-3208-46b7-98c1-e56570c795b3",
       "name": "GUS: Zaloguj"
     },
     {
@@ -151,8 +172,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, -200],
-      "id": "parse-gus-sid",
+      "position": [
+        -19392,
+        816
+      ],
+      "id": "7885e886-0528-4769-8b84-a5ec3b033100",
       "name": "Parsuj SID"
     },
     {
@@ -179,8 +203,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, -200],
-      "id": "gus-search",
+      "position": [
+        -19168,
+        816
+      ],
+      "id": "0fe76900-c44e-4a6b-b043-504e0bd21fe8",
       "name": "GUS: Szukaj po NIP"
     },
     {
@@ -189,8 +216,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1980, -200],
-      "id": "parse-gus-search",
+      "position": [
+        -18944,
+        816
+      ],
+      "id": "6a70bd03-5e88-4bfd-9abd-23c549758c27",
       "name": "Parsuj wynik szukania"
     },
     {
@@ -217,8 +247,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [2200, -200],
-      "id": "check-gus-found",
+      "position": [
+        -18736,
+        816
+      ],
+      "id": "b7e2f801-a158-4a2d-9c28-bb67627cf1d5",
       "name": "IF: Znaleziono w GUS?"
     },
     {
@@ -245,18 +278,24 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2420, -300],
-      "id": "gus-report",
+      "position": [
+        -18512,
+        720
+      ],
+      "id": "f7a036b4-0988-4535-b8b5-957b555fcfd7",
       "name": "GUS: Pobierz raport"
     },
     {
       "parameters": {
-        "jsCode": "// Parsuj pełny raport GUS (JSON endpoint zwraca XML w polu 'd')\nconst response = $input.first().json.d || '';\nconst prevData = $('Parsuj wynik szukania').first().json;\n\n// Funkcja pomocnicza do wyciągania wartości z XML\nfunction extractValue(xml, tagName) {\n  const regex = new RegExp(`<${tagName}>([^<]*)<\\/${tagName}>`);\n  const match = xml.match(regex);\n  return match ? match[1].trim() : '';\n}\n\n// Wyciągnij dane z raportu (różne pola dla osób prawnych i fizycznych)\nconst gusData = {\n  nazwa: extractValue(response, 'praw_nazwa') || extractValue(response, 'fiz_nazwa') || extractValue(response, 'Nazwa'),\n  ulica: extractValue(response, 'praw_adSiedzUlica_Nazwa') || extractValue(response, 'fiz_adSiedzUlica_Nazwa') || extractValue(response, 'Ulica'),\n  nrNieruchomosci: extractValue(response, 'praw_adSiedzNumerNieruchomosci') || extractValue(response, 'fiz_adSiedzNumerNieruchomosci') || extractValue(response, 'NrNieruchomosci'),\n  nrLokalu: extractValue(response, 'praw_adSiedzNumerLokalu') || extractValue(response, 'fiz_adSiedzNumerLokalu') || extractValue(response, 'NrLokalu'),\n  kodPocztowy: extractValue(response, 'praw_adSiedzKodPocztowy') || extractValue(response, 'fiz_adSiedzKodPocztowy') || extractValue(response, 'KodPocztowy'),\n  miejscowosc: extractValue(response, 'praw_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'fiz_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'Miejscowosc'),\n  regon: prevData.gusRegon,\n  krs: extractValue(response, 'praw_numerWRejestrzeEwidencji') || '',\n  pkd: extractValue(response, 'praw_pkdKod') || extractValue(response, 'fiz_pkdKod') || '',\n  formaPrawna: extractValue(response, 'praw_podstawowaFormaPrawna_Nazwa') || ''\n};\n\n// Zbuduj pełny adres\ngusData.adresPelny = [\n  gusData.ulica,\n  gusData.nrNieruchomosci + (gusData.nrLokalu ? '/' + gusData.nrLokalu : '')\n].filter(Boolean).join(' ');\n\nreturn [{\n  json: {\n    ...prevData,\n    gusData: gusData\n  }\n}];"
+        "jsCode": "// Parsuj pełny raport GUS (JSON endpoint zwraca XML w polu 'd')\nconst response = $input.first().json.d || '';\nconst prevData = $('Parsuj wynik szukania').first().json;\n\n// Funkcja pomocnicza do wyciągania wartości z XML\nfunction extractValue(xml, tagName) {\n  const regex = new RegExp(`<${tagName}>([^<]*)<\\/${tagName}>`);\n  const match = xml.match(regex);\n  return match ? match[1].trim() : '';\n}\n\n// Wyciągnij dane z raportu (różne pola dla osób prawnych i fizycznych)\nconst gusData = {\n  nazwa: extractValue(response, 'praw_nazwa') || extractValue(response, 'fiz_nazwa') || extractValue(response, 'Nazwa'),\n  ulica: extractValue(response, 'praw_adSiedzUlica_Nazwa') || extractValue(response, 'fiz_adSiedzUlica_Nazwa') || extractValue(response, 'Ulica'),\n  nrNieruchomosci: extractValue(response, 'praw_adSiedzNumerNieruchomosci') || extractValue(response, 'fiz_adSiedzNumerNieruchomosci') || extractValue(response, 'NrNieruchomosci'),\n  nrLokalu: extractValue(response, 'praw_adSiedzNumerLokalu') || extractValue(response, 'fiz_adSiedzNumerLokalu') || extractValue(response, 'NrLokalu'),\n  kodPocztowyRaw: extractValue(response, 'praw_adSiedzKodPocztowy') || extractValue(response, 'fiz_adSiedzKodPocztowy') || extractValue(response, 'KodPocztowy'),\n  miejscowosc: extractValue(response, 'praw_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'fiz_adSiedzMiejscowosc_Nazwa') || extractValue(response, 'Miejscowosc'),\n  regon: prevData.gusRegon,\n  krs: extractValue(response, 'praw_numerWRejestrzeEwidencji') || '',\n  pkd: extractValue(response, 'praw_pkdKod') || extractValue(response, 'fiz_pkdKod') || '',\n  formaPrawna: extractValue(response, 'praw_podstawowaFormaPrawna_Nazwa') || '',\n  email: extractValue(response, 'praw_adresEmail') || extractValue(response, 'fiz_adresEmail') || '',\n  wojewodztwo: extractValue(response, 'praw_adSiedzWojewodztwo_Nazwa') || extractValue(response, 'fiz_adSiedzWojewodztwo_Nazwa') || ''\n};\n\n// Mapowanie województw na ID listy Bitrix\nconst wojewodztwaMap = {\n  'dolnośląskie': 224, 'kujawsko-pomorskie': 226, 'lubelskie': 228,\n  'lubuskie': 230, 'łódzkie': 232, 'małopolskie': 234, 'mazowieckie': 236,\n  'opolskie': 238, 'podkarpackie': 240, 'podlaskie': 242, 'pomorskie': 244,\n  'śląskie': 246, 'świętokrzyskie': 248, 'warmińsko-mazurskie': 250,\n  'wielkopolskie': 252, 'zachodniopomorskie': 254\n};\ngusData.wojewodztwoId = wojewodztwaMap[gusData.wojewodztwo.toLowerCase()] || null;\n\n// Formatuj kod pocztowy (12345 -> 12-345)\nconst rawCode = gusData.kodPocztowyRaw;\ngusData.kodPocztowy = rawCode && rawCode.length === 5 ? rawCode.slice(0, 2) + '-' + rawCode.slice(2) : rawCode;\n\n// Zbuduj pełny adres\ngusData.adresPelny = [\n  gusData.ulica,\n  gusData.nrNieruchomosci + (gusData.nrLokalu ? '/' + gusData.nrLokalu : '')\n].filter(Boolean).join(' ');\n\nreturn [{\n  json: {\n    ...prevData,\n    gusData: gusData\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2640, -300],
-      "id": "parse-gus-report",
+      "position": [
+        -18288,
+        720
+      ],
+      "id": "12c4b445-2148-4d2b-8dfc-90b6ecccf65f",
       "name": "Parsuj raport GUS"
     },
     {
@@ -265,21 +304,23 @@
         "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.update",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"TITLE\": \"{{ $json.gusData.nazwa }}\",\n    \"ADDRESS\": \"{{ $json.gusData.adresPelny }}\",\n    \"ADDRESS_CITY\": \"{{ $json.gusData.miejscowosc }}\",\n    \"ADDRESS_POSTAL_CODE\": \"{{ $json.gusData.kodPocztowy }}\",\n    \"UF_CRM_1769435935\": \"{{ $json.gusData.regon }}\",\n    \"UF_CRM_1769435983\": \"{{ $json.gusData.krs }}\",\n    \"UF_CRM_1769435766\": 1386,\n    \"UF_CRM_1769435867\": \"\"\n  }\n}",
+        "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"TITLE\": \"{{ $json.gusData.nazwa }}\",\n    \"UF_CRM_1757666334249\": \"{{ $json.gusData.nazwa }}\",\n    \"UF_CRM_1769435935\": \"{{ $json.gusData.regon }}\",\n    \"UF_CRM_1769435983\": \"{{ $json.gusData.krs }}\",\n    \"UF_CRM_1769435766\": 1386,\n    \"UF_CRM_1769435867\": \"\"\n    {{ $json.gusData.adresPelny ? ', \"ADDRESS\": \"' + $json.gusData.adresPelny + '\"' : '' }}\n    {{ $json.gusData.miejscowosc ? ', \"ADDRESS_CITY\": \"' + $json.gusData.miejscowosc + '\"' : '' }}\n    {{ $json.gusData.kodPocztowy ? ', \"ADDRESS_POSTAL_CODE\": \"' + $json.gusData.kodPocztowy + '\"' : '' }}\n    {{ $json.gusData.email ? ', \"EMAIL\": [{\"VALUE\": \"' + $json.gusData.email + '\", \"VALUE_TYPE\": \"WORK\"}]' : '' }}\n    {{ $json.gusData.wojewodztwoId ? ', \"UF_CRM_661903D5079E4\": ' + $json.gusData.wojewodztwoId : '' }}\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2860, -300],
-      "id": "bitrix-update-success",
+      "position": [
+        -18064,
+        720
+      ],
+      "id": "b07ac14d-e61b-4f56-a324-db245b49a49a",
       "name": "Bitrix: Aktualizuj (sukces)"
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://system.firmao.pl/scanlab/svc/v1/customers",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
+        "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -293,15 +334,31 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3080, -300],
-      "id": "firmao-search",
+      "position": [
+        -17856,
+        720
+      ],
+      "id": "df41e296-d4a8-494f-9357-df8520ee3a30",
       "name": "Firmao: Szukaj klienta",
       "credentials": {
-        "httpBasicAuth": {
-          "id": "FIRMAO_CREDENTIALS_ID",
+        "httpHeaderAuth": {
+          "id": "niUM5B2VYoa0tvAr",
           "name": "Firmao API"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sprawdź czy klient z danym NIP istnieje w wynikach Firmao\nconst nip = $('Parsuj raport GUS').first().json.nipNormalized;\nconst customers = $input.first().json.data || [];\n\nconst found = customers.find(c => c.nipNumber === nip);\n\nreturn [{\n  json: {\n    customerExists: !!found,\n    customerId: found ? found.id : null,\n    customerLabel: found ? found.label : null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -17744,
+        720
+      ],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Sprawdź NIP w wynikach"
     },
     {
       "parameters": {
@@ -314,11 +371,11 @@
           "combinator": "and",
           "conditions": [
             {
-              "leftValue": "={{ $json.data.length }}",
-              "rightValue": 0,
+              "leftValue": "={{ $json.customerExists }}",
+              "rightValue": true,
               "operator": {
-                "type": "number",
-                "operation": "gt"
+                "type": "boolean",
+                "operation": "equals"
               }
             }
           ]
@@ -327,8 +384,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [3300, -300],
-      "id": "check-firmao-exists",
+      "position": [
+        -17520,
+        720
+      ],
+      "id": "d5b66d39-d59a-4ef4-aed2-7b1d44f91183",
       "name": "IF: Klient istnieje?"
     },
     {
@@ -336,43 +396,23 @@
         "method": "POST",
         "url": "=https://system.firmao.pl/scanlab/svc/v1/customers",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"label\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa.substring(0, 44) }}_TEST\",\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}_TEST\",\n  \"nipNumber\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\",\n  \"identificationNumber\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": {{ $('Parsuj raport GUS').first().json.gusData.krs ? '\"' + $('Parsuj raport GUS').first().json.gusData.krs + '\"' : 'null' }},\n  \"officeAddress\": {\n    \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n    \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n    \"postCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n    \"country\": \"Polska\"\n  }\n}",
+        "jsonBody": "={\n  \"label\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa.substring(0, 44) }}_TEST\",\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}_TEST\",\n  \"nipNumber\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3520, -400],
-      "id": "firmao-create",
+      "position": [
+        -17360,
+        848
+      ],
+      "id": "7c31651a-5151-424a-aa0a-d9d84d73c70e",
       "name": "Firmao: Utwórz klienta",
       "credentials": {
-        "httpBasicAuth": {
-          "id": "FIRMAO_CREDENTIALS_ID",
-          "name": "Firmao API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "PUT",
-        "url": "=https://system.firmao.pl/scanlab/svc/v1/customers/{{ $json.data[0].id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"label\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa.substring(0, 50) }}\",\n  \"name\": \"{{ $('Parsuj raport GUS').first().json.gusData.nazwa }}\",\n  \"identificationNumber\": \"{{ $('Parsuj raport GUS').first().json.gusData.regon }}\",\n  \"krs\": \"{{ $('Parsuj raport GUS').first().json.gusData.krs || null }}\",\n  \"officeAddress\": {\n    \"street\": \"{{ $('Parsuj raport GUS').first().json.gusData.adresPelny }}\",\n    \"city\": \"{{ $('Parsuj raport GUS').first().json.gusData.miejscowosc }}\",\n    \"postCode\": \"{{ $('Parsuj raport GUS').first().json.gusData.kodPocztowy }}\",\n    \"country\": \"Polska\"\n  }\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3520, -200],
-      "id": "firmao-update",
-      "name": "Firmao: Aktualizuj klienta",
-      "credentials": {
-        "httpBasicAuth": {
-          "id": "FIRMAO_CREDENTIALS_ID",
+        "httpHeaderAuth": {
+          "id": "niUM5B2VYoa0tvAr",
           "name": "Firmao API"
         }
       }
@@ -388,8 +428,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, 100],
-      "id": "bitrix-set-error",
+      "position": [
+        -19392,
+        1120
+      ],
+      "id": "aaa8353d-78fe-4002-a642-6590e0f76dfc",
       "name": "Bitrix: Ustaw ERROR"
     },
     {
@@ -403,24 +446,33 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, 100],
-      "id": "bitrix-notify-error",
+      "position": [
+        -19168,
+        1120
+      ],
+      "id": "6279ff2f-a585-40c7-ba17-4214386d2e5c",
       "name": "Bitrix: Notyfikacja błędu"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [880, 100],
-      "id": "skip-sync",
+      "position": [
+        -20048,
+        1120
+      ],
+      "id": "2cbb93ca-6b0e-45cc-a76e-422ad9532465",
       "name": "Pomiń (już zsync lub brak NIP)"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [3740, -300],
-      "id": "end-success",
+      "position": [
+        -17184,
+        720
+      ],
+      "id": "39c759e1-8671-4009-b346-f75a3da0d3ce",
       "name": "Koniec (sukces)"
     }
   ],
@@ -599,6 +651,17 @@
       "main": [
         [
           {
+            "node": "Sprawdź NIP w wynikach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sprawdź NIP w wynikach": {
+      "main": [
+        [
+          {
             "node": "IF: Klient istnieje?",
             "type": "main",
             "index": 0
@@ -650,27 +713,31 @@
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner"
+    "availableInMCP": false
   },
-  "versionId": "1",
+  "versionId": "043edb84-2acb-4146-bbd4-819e6312fd23",
   "meta": {
-    "templateCredsSetupCompleted": false,
     "instanceId": "03225ed10ba8421489a5d20fa2487cf89651d5d0fcd1776a5148a83a88891098"
   },
-  "id": "bitrix-gus-firmao-sync",
+  "id": "TZQet7ZjYUfIz1jE",
   "tags": [
     {
-      "name": "Bitrix",
-      "id": "bitrix"
+      "updatedAt": "2026-01-26T15:24:35.657Z",
+      "createdAt": "2026-01-26T15:24:35.657Z",
+      "id": "EJ4sNHgPvmhEDDjc",
+      "name": "GUS"
     },
     {
-      "name": "GUS",
-      "id": "gus"
+      "updatedAt": "2026-01-26T15:24:35.665Z",
+      "createdAt": "2026-01-26T15:24:35.665Z",
+      "id": "eL3DuGOTGouPPr0v",
+      "name": "Firmao"
     },
     {
-      "name": "Firmao",
-      "id": "firmao"
+      "updatedAt": "2026-01-26T15:24:35.669Z",
+      "createdAt": "2026-01-26T15:24:35.669Z",
+      "id": "fATGz4LN8uidj97w",
+      "name": "Bitrix"
     }
   ]
 }

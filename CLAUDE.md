@@ -1,6 +1,6 @@
 # Automatyzacja Bitrix-GUS-Firmao (n8n)
 
-## Status: W TRAKCIE TESTOWANIA - GUS dziala, Firmao do dokonczenia
+## Status: TESTOWANIE ZAAWANSOWANE - caly flow dziala, dopracowywanie
 
 ## Aktualny stan (2026-01-27)
 - Workflow zaimportowany do n8n
@@ -8,7 +8,8 @@
 - Bitrix GET dziala
 - Walidacja NIP dziala
 - **GUS API dziala** - uzywamy JSON endpoints (ajaxEndpoint)
-- **Firmao** - do dokonczenia (nazwy pol poprawione, adres do ustalenia)
+- **Firmao dziala** - tworzy klienta z NIP (Firmao sam pobiera reszta z GUS)
+- **Sprawdzanie duplikatow** - Code node sprawdza czy klient z danym NIP istnieje
 
 ## Pliki
 - `Bitrix_GUS_Firmao.json` - workflow n8n (20 node'ow)
@@ -23,6 +24,8 @@
 - **Pole Komunikat GUS:** `UF_CRM_1769435867`
 - **Pole REGON:** `UF_CRM_1769435935`
 - **Pole KRS:** `UF_CRM_1769435983`
+- **Pole Nazwa Gabinetu:** `UF_CRM_1757666334249`
+- **Pole Email:** `EMAIL` (standardowe, format multi-field: `[{"VALUE": "...", "VALUE_TYPE": "WORK"}]`)
 
 ### GUS BIR API (JSON endpoints - dzialaja!)
 - **Klucz API:** `b901f957c1f847c79d06`
@@ -97,9 +100,10 @@ Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 1. ~~**Dokonczyc Firmao** - ustalic jak zapisywac adres~~ DONE (officeAddress dziala)
 2. ~~**Dodac _TEST do nazwy** - przy tworzeniu klienta w Firmao~~ DONE
 3. ~~**Poprawic Status GUS** - zmienione na ID listy (OK=1386, ERROR=1388)~~ DONE
-4. **Przetestowac caly flow** - zaimportowac nowy JSON do n8n
-5. Skonfigurowac webhook w Bitrix (produkcyjny URL)
-6. Usunac _TEST i aktywowac workflow na produkcji
+4. ~~**Przetestowac caly flow**~~ DONE - flow dziala od webhook do Firmao
+5. ~~**Dodac Nazwa Gabinetu i Email**~~ DONE - dodano do aktualizacji Bitrix
+6. Skonfigurowac webhook w Bitrix (produkcyjny URL)
+7. Usunac _TEST i aktywowac workflow na produkcji
 
 ## Testowanie webhook (curl)
 ```bash
