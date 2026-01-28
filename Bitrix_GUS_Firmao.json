@@ -76,10 +76,10 @@
             },
             {
               "leftValue": "={{ $json.result.UF_CRM_1769435766 }}",
-              "rightValue": "1386",
+              "rightValue": "1396",
               "operator": {
                 "type": "string",
-                "operation": "notEquals"
+                "operation": "equals"
               }
             }
           ]

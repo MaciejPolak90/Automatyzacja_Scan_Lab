@@ -1,15 +1,18 @@
 # Automatyzacja Bitrix-GUS-Firmao (n8n)
 
-## Status: TESTOWANIE ZAAWANSOWANE - caly flow dziala, dopracowywanie
+## Status: GOTOWE DO PRODUKCJI - wymaga konfiguracji webhookow w Bitrix
 
-## Aktualny stan (2026-01-27)
-- Workflow zaimportowany do n8n
-- Webhook dziala (testowy: `https://n8n.public.asterisk-dev.pl/webhook-test/bitrix-company-webhook`)
-- Bitrix GET dziala
-- Walidacja NIP dziala
-- **GUS API dziala** - uzywamy JSON endpoints (ajaxEndpoint)
-- **Firmao dziala** - tworzy klienta z NIP (Firmao sam pobiera reszta z GUS)
-- **Sprawdzanie duplikatow** - Code node sprawdza czy klient z danym NIP istnieje
+## Aktualny stan (2026-01-28)
+- Workflow zaimportowany do n8n i przetestowany
+- **Wszystkie komponenty dzialaja:**
+  - Webhook n8n (produkcyjny: `https://n8n.public.asterisk-dev.pl/webhook/bitrix-company-webhook`)
+  - Bitrix GET/UPDATE
+  - Walidacja NIP (checksum)
+  - GUS API (JSON endpoints)
+  - Firmao (tworzenie klienta z NIP)
+  - Sprawdzanie duplikatow w Firmao
+- **Logika uruchamiania:** workflow wykonuje sie tylko gdy Status GUS = EXECUTE (1396)
+- **Pozostalo:** skonfigurowac webhooki wychodzace w Bitrix
 
 ## Pliki
 - `Bitrix_GUS_Firmao.json` - workflow n8n (20 node'ow)
@@ -20,7 +23,7 @@
 ### Bitrix24
 - **Webhook URL:** `https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/`
 - **Pole NIP:** `UF_CRM_661903D52335E`
-- **Pole Status GUS:** `UF_CRM_1769435766` (lista: PENDING=1384, OK=1386, ERROR=1388)
+- **Pole Status GUS:** `UF_CRM_1769435766` (lista: PENDING=1384, OK=1386, ERROR=1388, **EXECUTE=1396**)
 - **Pole Komunikat GUS:** `UF_CRM_1769435867`
 - **Pole REGON:** `UF_CRM_1769435935`
 - **Pole KRS:** `UF_CRM_1769435983`
@@ -71,13 +74,21 @@
 
 ## Przeplyw (20 node'ow)
 ```
-Webhook -> BitrixGet -> IF(sync?) -> WalidujNIP -> IF(valid?)
-  -> GUSLogin -> GUSSearch -> IF(found?) -> GUSReport
-  -> BitrixUpdate(OK) -> FirmaoSearch -> IF(exists?)
-    -> FirmaoCreate / FirmaoUpdate -> END
+Webhook -> RespondOK -> BitrixGet -> IF(Status=EXECUTE?)
+  -> WalidujNIP -> IF(valid?) -> GUSLogin -> GUSSearch
+  -> IF(found?) -> GUSReport -> ParseGUS -> BitrixUpdate(OK)
+  -> FirmaoSearch -> CheckNIP -> IF(exists?)
+    -> FirmaoCreate (jesli nie istnieje) -> END
+    -> SKIP (jesli istnieje) -> END
 
 Bledy: -> BitrixUpdate(ERROR) -> Notify -> END
+Brak EXECUTE: -> SKIP -> END
 ```
+
+### Warunek uruchomienia
+- NIP musi byc wypelniony
+- Status GUS musi byc rowny EXECUTE (1396)
+- Jesli warunek nie spelniony - workflow konczy sie bez akcji
 
 ## Walidacja NIP
 Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
@@ -97,20 +108,71 @@ Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 - **Rozwiazanie:** URL: `/svc/v1/` (nie `/api/`), pola: `nipNumber`, `identificationNumber`
 
 ## Kolejne kroki do wykonania
-1. ~~**Dokonczyc Firmao** - ustalic jak zapisywac adres~~ DONE (officeAddress dziala)
+1. ~~**Dokonczyc Firmao** - ustalic jak zapisywac adres~~ DONE
 2. ~~**Dodac _TEST do nazwy** - przy tworzeniu klienta w Firmao~~ DONE
-3. ~~**Poprawic Status GUS** - zmienione na ID listy (OK=1386, ERROR=1388)~~ DONE
-4. ~~**Przetestowac caly flow**~~ DONE - flow dziala od webhook do Firmao
-5. ~~**Dodac Nazwa Gabinetu i Email**~~ DONE - dodano do aktualizacji Bitrix
-6. Skonfigurowac webhook w Bitrix (produkcyjny URL)
-7. Usunac _TEST i aktywowac workflow na produkcji
+3. ~~**Poprawic Status GUS** - zmienione na ID listy~~ DONE
+4. ~~**Przetestowac caly flow**~~ DONE
+5. ~~**Dodac Nazwa Gabinetu i Email**~~ DONE
+6. ~~**Zmienic logike na EXECUTE trigger**~~ DONE - workflow odpala sie tylko gdy Status GUS = EXECUTE
+7. **Skonfigurowac webhooki wychodzace w Bitrix** - INSTRUKCJA PONIZEJ
+8. Usunac _TEST z nazw klientow Firmao i aktywowac workflow na produkcji
+
+---
+
+## INSTRUKCJA: Konfiguracja webhookow w Bitrix24
+
+### Krok 1: Wejdz w panel webhookow
+URL: `https://b24-x44o93.bitrix24.pl/devops/section/standard/`
+Lub: Aplikacje -> Developer resources -> Inne -> Outbound webhooks
+
+### Krok 2: Dodaj webhook dla TWORZENIA firmy
+- **Event type:** `ONCRMCOMPANYADD`
+- **Handler URL:** `https://n8n.public.asterisk-dev.pl/webhook/bitrix-company-webhook`
+- Zapisz
+
+### Krok 3: Dodaj webhook dla EDYCJI firmy
+- **Event type:** `ONCRMCOMPANYUPDATE`
+- **Handler URL:** `https://n8n.public.asterisk-dev.pl/webhook/bitrix-company-webhook`
+- Zapisz
+
+### Krok 4: Aktywuj workflow w n8n
+- Wejdz w n8n -> Workflows -> Bitrix-GUS-Firmao
+- Ustaw przelacznik **Active = ON**
+
+### Jak to dziala
+1. Uzytkownik tworzy/edytuje firme w Bitrix
+2. Bitrix wysyla webhook do n8n (kazda zmiana)
+3. n8n sprawdza czy Status GUS = EXECUTE (1396)
+   - Jesli TAK -> wykonuje synchronizacje z GUS i Firmao
+   - Jesli NIE -> ignoruje request (nic nie robi)
+4. Po synchronizacji Status GUS zmienia sie na OK (1386) lub ERROR (1388)
+
+### Test po konfiguracji
+1. Utworz nowa firme w Bitrix
+2. Wpisz NIP
+3. Ustaw Status GUS = EXECUTE
+4. Zapisz firme
+5. Sprawdz czy dane zostaly pobrane z GUS i firma utworzona w Firmao
+
+---
 
 ## Testowanie webhook (curl)
+
+### URL testowy (wymaga Listen for test event w n8n)
 ```bash
 curl -X POST "https://n8n.public.asterisk-dev.pl/webhook-test/bitrix-company-webhook" \
   -H "Content-Type: application/json" \
   -d '{"COMPANY_ID": "4492"}'
 ```
+
+### URL produkcyjny (wymaga Active workflow w n8n)
+```bash
+curl -X POST "https://n8n.public.asterisk-dev.pl/webhook/bitrix-company-webhook" \
+  -H "Content-Type: application/json" \
+  -d '{"COMPANY_ID": "4492"}'
+```
+
+**UWAGA:** Produkcyjny URL (`/webhook/` bez `-test`) dziala TYLKO gdy workflow jest aktywny!
 
 ## Przydatne linki
 - Portal API GUS: https://api.stat.gov.pl/Home/RegonApi
