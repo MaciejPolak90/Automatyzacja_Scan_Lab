@@ -21,7 +21,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\"status\": \"received\", \"companyId\": \"{{ $json.body.data.FIELDS.ID }}\"}",
+        "responseBody": "={\"status\": \"received\", \"companyId\": \"{{ $json.body['data[FIELDS][ID]'] ?? $json.body.COMPANY_ID }}\"}",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
@@ -35,13 +35,13 @@
     },
     {
       "parameters": {
-        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.get",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/e7ipt5izcl5pwz2n/crm.company.get",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
             {
               "name": "ID",
-              "value": "={{ $json.body.data?.FIELDS?.ID ?? $json.body.COMPANY_ID }}"
+              "value": "={{ $json.body['data[FIELDS][ID]'] ?? $json.body.COMPANY_ID }}"
             }
           ]
         },
@@ -301,7 +301,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.update",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/e7ipt5izcl5pwz2n/crm.company.update",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"TITLE\": \"{{ $json.gusData.nazwa }}\",\n    \"UF_CRM_1757666334249\": \"{{ $json.gusData.nazwa }}\",\n    \"UF_CRM_1769435935\": \"{{ $json.gusData.regon }}\",\n    \"UF_CRM_1769435983\": \"{{ $json.gusData.krs }}\",\n    \"UF_CRM_1769435766\": 1386,\n    \"UF_CRM_1769435867\": \"\"\n    {{ $json.gusData.adresPelny ? ', \"ADDRESS\": \"' + $json.gusData.adresPelny + '\"' : '' }}\n    {{ $json.gusData.miejscowosc ? ', \"ADDRESS_CITY\": \"' + $json.gusData.miejscowosc + '\"' : '' }}\n    {{ $json.gusData.kodPocztowy ? ', \"ADDRESS_POSTAL_CODE\": \"' + $json.gusData.kodPocztowy + '\"' : '' }}\n    {{ $json.gusData.email ? ', \"EMAIL\": [{\"VALUE\": \"' + $json.gusData.email + '\", \"VALUE_TYPE\": \"WORK\"}]' : '' }}\n    {{ $json.gusData.wojewodztwoId ? ', \"UF_CRM_661903D5079E4\": ' + $json.gusData.wojewodztwoId : '' }}\n  }\n}",
@@ -315,6 +315,42 @@
       ],
       "id": "b07ac14d-e61b-4f56-a324-db245b49a49a",
       "name": "Bitrix: Aktualizuj (sukces)"
+    },
+    {
+      "parameters": {
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/e7ipt5izcl5pwz2n/user.get",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ID",
+              "value": "={{ $('Parsuj raport GUS').first().json.result.ASSIGNED_BY_ID }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -17840,
+        720
+      ],
+      "id": "b1c2d3e4-f5a6-7890-bcde-fa1234567891",
+      "name": "Bitrix: Pobierz użytkownika"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Zbierz dane z Bitrix i przygotuj payload do aktualizacji klienta w Firmao\n// UWAGA: Firmao PUT wymaga notacji z kropka dla zagniezdzonych pol\n// np. 'customFields.custom5' zamiast {customFields: {custom5: ...}}\n// Telefony i emaile to tablice: 'phones', 'emails'\nconst bitrixData = $('Parsuj raport GUS').first().json.result;\nconst userResult = $input.first().json.result || [];\nconst user = Array.isArray(userResult) && userResult.length > 0 ? userResult[0] : {};\n\n// 1. Osoba odpowiedzialna (imie + nazwisko)\nconst userName = [user.NAME, user.LAST_NAME].filter(Boolean).join(' ');\n\n// 2. Skaner (mapowanie ID enum Bitrix na nazwy)\nconst skanerMap = {\n  '628': 'Cameo', '630': 'Medit i500', '632': 'Pro Smile',\n  '634': 'Sirona', '636': 'SKANER ODEBRANY', '638': 'WŁASNY SKANER',\n  '664': 'Rapid', '980': 'Upcera'\n};\nconst skanerRaw = bitrixData.UF_CRM_1713100433488;\nlet skanerValue = '';\nif (Array.isArray(skanerRaw)) {\n  skanerValue = skanerRaw.map(id => skanerMap[String(id)] || String(id)).join(', ');\n} else if (skanerRaw && skanerRaw !== false && skanerRaw !== 'false') {\n  skanerValue = skanerMap[String(skanerRaw)] || String(skanerRaw);\n}\n\n// 3. Adres z Bitrix\nconst street = bitrixData.ADDRESS || '';\nconst city = bitrixData.ADDRESS_CITY || '';\nconst postCode = bitrixData.ADDRESS_POSTAL_CODE || '';\n\n// 4. Telefony (Bitrix multi-field)\nconst phones = Array.isArray(bitrixData.PHONE)\n  ? bitrixData.PHONE.map(p => p.VALUE).filter(Boolean)\n  : [];\n\n// 5. Emaile (Bitrix multi-field)\nconst emails = Array.isArray(bitrixData.EMAIL)\n  ? bitrixData.EMAIL.map(e => e.VALUE).filter(Boolean)\n  : [];\n\n// Buduj obiekt aktualizacji z notacja kropkowa (wymagane przez Firmao PUT)\nconst update = {};\n\nif (userName) update['customFields.custom5'] = userName;\nif (skanerValue) update['customFields.custom6'] = skanerValue;\n\nif (street) update['officeAddress.street'] = street;\nif (city) update['officeAddress.city'] = city;\nif (postCode) update['officeAddress.postCode'] = postCode;\nif (street || city || postCode) update['officeAddress.country'] = 'Polska';\n\nif (phones.length > 0) update.phones = phones;\nif (emails.length > 0) update.emails = emails;\n\nreturn [{\n  json: {\n    firmaoUpdateBody: JSON.stringify(update),\n    hasUpdates: Object.keys(update).length > 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -17616,
+        720
+      ],
+      "id": "c2d3e4f5-a6b7-8901-cdef-ab2345678902",
+      "name": "Przygotuj dane Firmao"
     },
     {
       "parameters": {
@@ -335,7 +371,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -17856,
+        -17392,
         720
       ],
       "id": "df41e296-d4a8-494f-9357-df8520ee3a30",
@@ -354,7 +390,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -17744,
+        -17168,
         720
       ],
       "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -385,7 +421,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -17520,
+        -16944,
         720
       ],
       "id": "d5b66d39-d59a-4ef4-aed2-7b1d44f91183",
@@ -405,7 +441,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -17360,
+        -16720,
         848
       ],
       "id": "7c31651a-5151-424a-aa0a-d9d84d73c70e",
@@ -419,8 +455,34 @@
     },
     {
       "parameters": {
+        "method": "PUT",
+        "url": "=https://system.firmao.pl/scanlab/svc/v1/customers/{{ $json.changelog[0].objectId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Przygotuj dane Firmao').first().json.firmaoUpdateBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16496,
+        848
+      ],
+      "id": "d3e4f5a6-b7c8-9012-defa-bc3456789013",
+      "name": "Firmao: Aktualizuj klienta",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "niUM5B2VYoa0tvAr",
+          "name": "Firmao API"
+        }
+      }
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/crm.company.update",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/e7ipt5izcl5pwz2n/crm.company.update",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"ID\": \"{{ $json.result.ID }}\",\n  \"fields\": {\n    \"UF_CRM_1769435766\": 1388,\n    \"UF_CRM_1769435867\": \"{{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\"\n  }\n}",
@@ -438,7 +500,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/im.notify",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/e7ipt5izcl5pwz2n/im.notify",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"to\": \"{{ $json.result.ASSIGNED_BY_ID }}\",\n  \"message\": \"[B]Błąd synchronizacji GUS[/B]\\n\\nFirma: {{ $json.result.TITLE }}\\nNIP: {{ $json.result.UF_CRM_661903D52335E }}\\n\\nPowód: {{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\\n\\n[URL=/crm/company/details/{{ $json.result.ID }}/]Otwórz firmę[/URL]\"\n}",
@@ -469,7 +531,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -17184,
+        -16272,
         720
       ],
       "id": "39c759e1-8671-4009-b346-f75a3da0d3ce",
@@ -640,6 +702,28 @@
       "main": [
         [
           {
+            "node": "Bitrix: Pobierz użytkownika",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bitrix: Pobierz użytkownika": {
+      "main": [
+        [
+          {
+            "node": "Przygotuj dane Firmao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Przygotuj dane Firmao": {
+      "main": [
+        [
+          {
             "node": "Firmao: Szukaj klienta",
             "type": "main",
             "index": 0
@@ -688,6 +772,17 @@
       ]
     },
     "Firmao: Utwórz klienta": {
+      "main": [
+        [
+          {
+            "node": "Firmao: Aktualizuj klienta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firmao: Aktualizuj klienta": {
       "main": [
         [
           {

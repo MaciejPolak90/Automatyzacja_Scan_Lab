@@ -21,7 +21,7 @@
 ## Skonfigurowane wartosci (HARDCODED w workflow)
 
 ### Bitrix24
-- **Webhook URL:** `https://b24-x44o93.bitrix24.pl/rest/154/f07c2dmvuwsi52qb/`
+- **Webhook URL:** `https://b24-x44o93.bitrix24.pl/rest/154/e7ipt5izcl5pwz2n/`
 - **Pole NIP:** `UF_CRM_661903D52335E`
 - **Pole Status GUS:** `UF_CRM_1769435766` (lista: PENDING=1384, OK=1386, ERROR=1388, **EXECUTE=1396**)
 - **Pole Komunikat GUS:** `UF_CRM_1769435867`
@@ -50,21 +50,32 @@
 - **Credential w n8n:** Header Auth z `Authorization: Basic c2NhbmxhYi5hcGlAZmlybWFvLnBsOmQzNmU3MjViYTU5YjRhN2U=`
 
 ### Pola Firmao dla customers (wazne!)
+
+#### POST (tworzenie)
 - `label` - krotka nazwa (wymagane)
 - `name` - pelna nazwa (wymagane)
 - `nipNumber` - NIP (nie "nip"!)
 - `identificationNumber` - REGON (nie "regon"!)
 - `krs` - KRS
-- `officeAddress` - obiekt adresu siedziby (przy GET zwraca, przy POST moze nie dzialac):
-  - `street` - ulica z numerem
-  - `city` - miasto
-  - `postCode` - kod pocztowy
-  - `country` - kraj
-  - `county` - powiat
-- `correspondenceAddress` - obiekt adresu korespondencyjnego (taka sama struktura)
 - `description` - opis
-- `email`, `email2`, `email3` - emaile
-- `phone`, `phoneOther`, `phoneOther2` - telefony
+- Odpowiedz POST: `{"changelog": [{"objectId": 123, ...}]}` - ID nowego klienta w `changelog[0].objectId`
+
+#### PUT (aktualizacja) - NOTACJA KROPKOWA!
+Firmao PUT NIE akceptuje zagniezdzonych obiektow! Trzeba uzywac notacji z kropka:
+- `"customFields.custom5"` - Opiekun Klienta (nie `{customFields: {custom5: ...}}`)
+- `"customFields.custom6"` - Typ skanera
+- `"officeAddress.street"` - ulica z numerem
+- `"officeAddress.city"` - miasto
+- `"officeAddress.postCode"` - kod pocztowy
+- `"officeAddress.country"` - kraj
+- `"phones"` - tablica telefonow (nie `phone`!)
+- `"emails"` - tablica emaili (nie `email`!)
+- `description` - opis (flat field, dziala normalnie)
+
+#### GET (odczyt)
+- Zwraca zagniedzone obiekty: `officeAddress: {street, city, ...}`, `customFields: {custom5, ...}`
+- Telefony: `phone`, `phoneOther`, `phoneOther2` (flat fields)
+- Emaile: `email`, `email2`, `email3` (flat fields)
 - `website` - strona www
 
 ## Testowa firma w Bitrix
@@ -72,13 +83,13 @@
 - **NIP:** 1133175087
 - **Firma:** MaCode Maciej Polak (pobrane z GUS!)
 
-## Przeplyw (20 node'ow)
+## Przeplyw (23 node'y)
 ```
 Webhook -> RespondOK -> BitrixGet -> IF(Status=EXECUTE?)
   -> WalidujNIP -> IF(valid?) -> GUSLogin -> GUSSearch
   -> IF(found?) -> GUSReport -> ParseGUS -> BitrixUpdate(OK)
-  -> FirmaoSearch -> CheckNIP -> IF(exists?)
-    -> FirmaoCreate (jesli nie istnieje) -> END
+  -> BitrixGetUser -> PrzygotujDaneFirmao -> FirmaoSearch -> CheckNIP -> IF(exists?)
+    -> FirmaoCreate (jesli nie istnieje) -> FirmaoUpdate -> END
     -> SKIP (jesli istnieje) -> END
 
 Bledy: -> BitrixUpdate(ERROR) -> Notify -> END
