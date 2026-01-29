@@ -2,20 +2,20 @@
 
 ## Status: GOTOWE DO PRODUKCJI - wymaga konfiguracji webhookow w Bitrix
 
-## Aktualny stan (2026-01-28)
+## Aktualny stan (2026-01-29)
 - Workflow zaimportowany do n8n i przetestowany
 - **Wszystkie komponenty dzialaja:**
   - Webhook n8n (produkcyjny: `https://n8n.public.asterisk-dev.pl/webhook/bitrix-company-webhook`)
-  - Bitrix GET/UPDATE
+  - Bitrix GET/UPDATE + pobieranie uzytkownika (ASSIGNED_BY_ID)
   - Walidacja NIP (checksum)
   - GUS API (JSON endpoints)
-  - Firmao (tworzenie klienta z NIP)
+  - Firmao: tworzenie klienta z NIP + aktualizacja danymi z Bitrix
   - Sprawdzanie duplikatow w Firmao
 - **Logika uruchamiania:** workflow wykonuje sie tylko gdy Status GUS = EXECUTE (1396)
-- **Pozostalo:** skonfigurowac webhooki wychodzace w Bitrix
+- **Pozostalo:** skonfigurowac webhooki wychodzace w Bitrix, usunac _TEST z nazw
 
 ## Pliki
-- `Bitrix_GUS_Firmao.json` - workflow n8n (20 node'ow)
+- `Bitrix_GUS_Firmao.json` - workflow n8n (23 node'y)
 - `CLAUDE.md` - ten plik kontekstowy
 
 ## Skonfigurowane wartosci (HARDCODED w workflow)
@@ -118,6 +118,43 @@ Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 - **Problem:** Bledne URL i nazwy pol
 - **Rozwiazanie:** URL: `/svc/v1/` (nie `/api/`), pola: `nipNumber`, `identificationNumber`
 
+### Firmao PUT - notacja kropkowa
+- **Problem:** PUT zwraca 400 unknownParameter dla `customFields`, `officeAddress`, `phone`, `email`
+- **Rozwiazanie:** Uzywac notacji z kropka: `"customFields.custom5"`, `"officeAddress.street"` itd.
+  Telefony i emaile jako tablice: `"phones": [...]`, `"emails": [...]`
+
+### Firmao POST - ID nowego klienta
+- **Problem:** `$json.id` w nastepnym nodzie jest undefined (URL PUT konczyl sie na `/customers/`)
+- **Rozwiazanie:** Firmao POST zwraca `{"changelog": [{"objectId": 123}]}`, wiec ID to `$json.changelog[0].objectId`
+
+### Bitrix webhook format
+- **Problem:** Bitrix outbound webhook wysyla `application/x-www-form-urlencoded` z kluczami `data[FIELDS][ID]`
+- **Rozwiazanie:** Odczyt przez `$json.body['data[FIELDS][ID]']` zamiast `$json.body.data.FIELDS.ID`
+
+## Mapowanie pol Bitrix -> Firmao (aktualizacja klienta po utworzeniu)
+
+| Bitrix pole | Bitrix ID | Firmao pole (PUT) | Opis |
+|---|---|---|---|
+| Osoba odpowiedzialna | `ASSIGNED_BY_ID` (wymaga user.get) | `customFields.custom5` | Imie + Nazwisko |
+| Skaner | `UF_CRM_1713100433488` (multi-select enum) | `customFields.custom6` | Mapowanie ID na nazwy |
+| Adres | `ADDRESS` | `officeAddress.street` | Ulica z numerem |
+| Miasto | `ADDRESS_CITY` | `officeAddress.city` | Miasto |
+| Kod pocztowy | `ADDRESS_POSTAL_CODE` | `officeAddress.postCode` | Kod pocztowy |
+| Telefony | `PHONE` (multi-field tablica) | `phones` (tablica) | Max 3 telefony |
+| Emaile | `EMAIL` (multi-field tablica) | `emails` (tablica) | Max 3 emaile |
+
+### Mapowanie enum Skaner (Bitrix ID -> nazwa)
+| ID | Nazwa |
+|---|---|
+| 628 | Cameo |
+| 630 | Medit i500 |
+| 632 | Pro Smile |
+| 634 | Sirona |
+| 636 | SKANER ODEBRANY |
+| 638 | WŁASNY SKANER |
+| 664 | Rapid |
+| 980 | Upcera |
+
 ## Kolejne kroki do wykonania
 1. ~~**Dokonczyc Firmao** - ustalic jak zapisywac adres~~ DONE
 2. ~~**Dodac _TEST do nazwy** - przy tworzeniu klienta w Firmao~~ DONE
@@ -127,6 +164,7 @@ Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 6. ~~**Zmienic logike na EXECUTE trigger**~~ DONE - workflow odpala sie tylko gdy Status GUS = EXECUTE
 7. **Skonfigurowac webhooki wychodzace w Bitrix** - INSTRUKCJA PONIZEJ
 8. Usunac _TEST z nazw klientow Firmao i aktywowac workflow na produkcji
+9. ~~**Dodac aktualizacje klienta Firmao danymi z Bitrix**~~ DONE - Skaner, Opiekun, Adres, Telefon, Email
 
 ---
 
