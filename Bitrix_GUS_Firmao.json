@@ -361,8 +361,8 @@
         "queryParameters": {
           "parameters": [
             {
-              "name": "filters",
-              "value": "={\"nipNumber\": \"{{ $('Parsuj raport GUS').first().json.nipNormalized }}\"}"
+              "name": "nipNumber(eq)",
+              "value": "={{ $('Parsuj raport GUS').first().json.nipNormalized }}"
             }
           ]
         },
@@ -503,7 +503,7 @@
         "url": "=https://b24-x44o93.bitrix24.pl/rest/154/e7ipt5izcl5pwz2n/im.notify",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"to\": \"{{ $json.result.ASSIGNED_BY_ID }}\",\n  \"message\": \"[B]Błąd synchronizacji GUS[/B]\\n\\nFirma: {{ $json.result.TITLE }}\\nNIP: {{ $json.result.UF_CRM_661903D52335E }}\\n\\nPowód: {{ $json.nipError || $json.gusError || 'Nieznany błąd' }}\\n\\n[URL=/crm/company/details/{{ $json.result.ID }}/]Otwórz firmę[/URL]\"\n}",
+        "jsonBody": "={\n  \"to\": \"{{ $('Bitrix: Pobierz firmę').first().json.result.ASSIGNED_BY_ID }}\",\n  \"message\": \"[B]Błąd synchronizacji GUS[/B]\\n\\nFirma: {{ $('Bitrix: Pobierz firmę').first().json.result.TITLE }}\\nNIP: {{ $('Bitrix: Pobierz firmę').first().json.result.UF_CRM_661903D52335E }}\\n\\nPowód: {{ $('Waliduj NIP').first().json.nipError || 'Nie znaleziono firmy w rejestrze GUS' }}\\n\\n[URL=/crm/company/details/{{ $('Bitrix: Pobierz firmę').first().json.result.ID }}/]Otwórz firmę[/URL]\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -536,6 +536,24 @@
       ],
       "id": "39c759e1-8671-4009-b346-f75a3da0d3ce",
       "name": "Koniec (sukces)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://b24-x44o93.bitrix24.pl/rest/154/e7ipt5izcl5pwz2n/im.notify",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $('Bitrix: Pobierz firmę').first().json.result.ASSIGNED_BY_ID }}\",\n  \"message\": \"[B]Klient już istnieje w Firmao[/B]\\n\\nFirma (Bitrix): {{ $('Bitrix: Pobierz firmę').first().json.result.TITLE }}\\nNIP: {{ $('Bitrix: Pobierz firmę').first().json.result.UF_CRM_661903D52335E }}\\nKlient w Firmao: {{ $('Sprawdź NIP w wynikach').first().json.customerLabel }}\\n\\nKlient nie został utworzony ponownie.\\n\\n[URL=/crm/company/details/{{ $('Bitrix: Pobierz firmę').first().json.result.ID }}/]Otwórz firmę w Bitrix[/URL]\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16720,
+        620
+      ],
+      "id": "e4f5a6b7-c8d9-0123-efab-cd4567890124",
+      "name": "Bitrix: Klient istnieje w Firmao"
     }
   ],
   "pinData": {},
@@ -757,7 +775,7 @@
       "main": [
         [
           {
-            "node": "Koniec (sukces)",
+            "node": "Bitrix: Klient istnieje w Firmao",
             "type": "main",
             "index": 0
           }
@@ -798,6 +816,17 @@
         [
           {
             "node": "Bitrix: Notyfikacja błędu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bitrix: Klient istnieje w Firmao": {
+      "main": [
+        [
+          {
+            "node": "Koniec (sukces)",
             "type": "main",
             "index": 0
           }

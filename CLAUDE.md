@@ -2,7 +2,7 @@
 
 ## Status: GOTOWE DO PRODUKCJI - wymaga konfiguracji webhookow w Bitrix
 
-## Aktualny stan (2026-01-29)
+## Aktualny stan (2026-02-02)
 - Workflow zaimportowany do n8n i przetestowany
 - **Wszystkie komponenty dzialaja:**
   - Webhook n8n (produkcyjny: `https://n8n.public.asterisk-dev.pl/webhook/bitrix-company-webhook`)
@@ -15,7 +15,7 @@
 - **Pozostalo:** skonfigurowac webhooki wychodzace w Bitrix, usunac _TEST z nazw
 
 ## Pliki
-- `Bitrix_GUS_Firmao.json` - workflow n8n (23 node'y)
+- `Bitrix_GUS_Firmao.json` - workflow n8n (24 node'y)
 - `CLAUDE.md` - ten plik kontekstowy
 
 ## Skonfigurowane wartosci (HARDCODED w workflow)
@@ -72,7 +72,10 @@ Firmao PUT NIE akceptuje zagniezdzonych obiektow! Trzeba uzywac notacji z kropka
 - `"emails"` - tablica emaili (nie `email`!)
 - `description` - opis (flat field, dziala normalnie)
 
-#### GET (odczyt)
+#### GET (odczyt / filtrowanie)
+- Format filtrow: `fieldName(comparisonType)=value` np. `nipNumber(eq)=1133175087`
+- Operatory: `eq`, `ne`, `contains`, `notContains`, `in`, `notin`, `gt`, `ge`, `lt`, `le`
+- WAZNE: Format `filters={"nipNumber":"..."}` NIE DZIALA! Trzeba uzywac `nipNumber(eq)=...`
 - Zwraca zagniedzone obiekty: `officeAddress: {street, city, ...}`, `customFields: {custom5, ...}`
 - Telefony: `phone`, `phoneOther`, `phoneOther2` (flat fields)
 - Emaile: `email`, `email2`, `email3` (flat fields)
@@ -83,14 +86,14 @@ Firmao PUT NIE akceptuje zagniezdzonych obiektow! Trzeba uzywac notacji z kropka
 - **NIP:** 1133175087
 - **Firma:** MaCode Maciej Polak (pobrane z GUS!)
 
-## Przeplyw (23 node'y)
+## Przeplyw (24 node'y)
 ```
 Webhook -> RespondOK -> BitrixGet -> IF(Status=EXECUTE?)
   -> WalidujNIP -> IF(valid?) -> GUSLogin -> GUSSearch
   -> IF(found?) -> GUSReport -> ParseGUS -> BitrixUpdate(OK)
   -> BitrixGetUser -> PrzygotujDaneFirmao -> FirmaoSearch -> CheckNIP -> IF(exists?)
     -> FirmaoCreate (jesli nie istnieje) -> FirmaoUpdate -> END
-    -> SKIP (jesli istnieje) -> END
+    -> NotifyExists (jesli istnieje) -> END
 
 Bledy: -> BitrixUpdate(ERROR) -> Notify -> END
 Brak EXECUTE: -> SKIP -> END
@@ -130,6 +133,14 @@ Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 ### Bitrix webhook format
 - **Problem:** Bitrix outbound webhook wysyla `application/x-www-form-urlencoded` z kluczami `data[FIELDS][ID]`
 - **Rozwiazanie:** Odczyt przez `$json.body['data[FIELDS][ID]']` zamiast `$json.body.data.FIELDS.ID`
+
+### Firmao GET - filtrowanie nie dzialalo
+- **Problem:** Parametr `filters={"nipNumber":"..."}` nie filtrowal - Firmao zwracal WSZYSTKICH klientow (500)
+- **Rozwiazanie:** Prawidlowy format to `nipNumber(eq)=WARTOSC` (nie JSON w parametrze `filters`)
+
+### Bitrix notyfikacja - USER_ID_EMPTY
+- **Problem:** Node "Bitrix: Notyfikacja bledu" odwolywal sie do `$json.result.ASSIGNED_BY_ID` ale output z "Bitrix: Ustaw ERROR" to `{result: true}` (boolean)
+- **Rozwiazanie:** Uzycie `$('Bitrix: Pobierz firme').first().json.result.ASSIGNED_BY_ID` zamiast `$json.result.ASSIGNED_BY_ID`
 
 ## Mapowanie pol Bitrix -> Firmao (aktualizacja klienta po utworzeniu)
 
