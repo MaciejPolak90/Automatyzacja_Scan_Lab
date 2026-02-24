@@ -1,9 +1,9 @@
 # Automatyzacja Bitrix-GUS-Firmao (n8n)
 
-## Status: GOTOWE DO PRODUKCJI - wymaga konfiguracji webhookow w Bitrix
+## Status: PRODUKCJA - w pelni dzialajacy
 
-## Aktualny stan (2026-02-02)
-- Workflow zaimportowany do n8n i przetestowany
+## Aktualny stan (2026-02-24)
+- Workflow aktywny w n8n i dziala na produkcji
 - **Wszystkie komponenty dzialaja:**
   - Webhook n8n (produkcyjny: `https://n8n.public.asterisk-dev.pl/webhook/bitrix-company-webhook`)
   - Bitrix GET/UPDATE + pobieranie uzytkownika (ASSIGNED_BY_ID)
@@ -11,8 +11,8 @@
   - GUS API (JSON endpoints)
   - Firmao: tworzenie klienta z NIP + aktualizacja danymi z Bitrix
   - Sprawdzanie duplikatow w Firmao
+  - Webhooki wychodzace Bitrix skonfigurowane (ONCRMCOMPANYADD, ONCRMCOMPANYUPDATE)
 - **Logika uruchamiania:** workflow wykonuje sie tylko gdy Status GUS = EXECUTE (1396)
-- **Pozostalo:** skonfigurowac webhooki wychodzace w Bitrix, usunac _TEST z nazw
 
 ## Pliki
 - `Bitrix_GUS_Firmao.json` - workflow n8n (24 node'y)
@@ -107,6 +107,20 @@ Brak EXECUTE: -> SKIP -> END
 ## Walidacja NIP
 Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 
+## Wzorzec: bezpieczne JSON body w n8n
+
+Nigdy nie buduj jsonBody przez konkatenacje stringow z danymi zewnetrznymi (np. nazwa firmy z GUS moze zawierac cudzyslow `"`). Zawsze uzywaj Code node z `JSON.stringify()` bezposrednio przed HTTP Request node:
+
+```javascript
+return [{ json: { myBody: JSON.stringify({ field: externalData }) } }];
+```
+Nastepnie w HTTP node: `"jsonBody": "={{ $json.myBody }}"`.
+
+Bezpieczne bez Code node (dane kontrolowane przez nas):
+- Stale wartosci liczbowe (np. status ID: 1386, 1388)
+- Komunikaty bledow z naszego kodu (nipError, gusError)
+- Pola z samymi cyframi (NIP po normalizacji, REGON)
+
 ## Rozwiazane problemy
 
 ### GUS SOAP/MTOM
@@ -173,8 +187,8 @@ Wagi checksum: [6,5,7,2,3,4,5,6,7], suma mod 11 == ostatnia cyfra
 4. ~~**Przetestowac caly flow**~~ DONE
 5. ~~**Dodac Nazwa Gabinetu i Email**~~ DONE
 6. ~~**Zmienic logike na EXECUTE trigger**~~ DONE - workflow odpala sie tylko gdy Status GUS = EXECUTE
-7. **Skonfigurowac webhooki wychodzace w Bitrix** - INSTRUKCJA PONIZEJ
-8. Usunac _TEST z nazw klientow Firmao i aktywowac workflow na produkcji
+7. ~~**Skonfigurowac webhooki wychodzace w Bitrix**~~ DONE
+8. ~~**Usunac _TEST z nazw klientow Firmao i aktywowac workflow na produkcji**~~ DONE
 9. ~~**Dodac aktualizacje klienta Firmao danymi z Bitrix**~~ DONE - Skaner, Opiekun, Adres, Telefon, Email
 
 ---
